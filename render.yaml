@@ -1,0 +1,54 @@
+# ACCIMAP : Blueprint Render (https://render.com/docs/blueprint-spec).
+# Render > New > Blueprint > ce dépôt : crée la base PostgreSQL et le service web Docker.
+# Aucun secret ici : SECRET_KEY est générée par Render ; les valeurs « sync: false » sont demandées à la création.
+
+databases:
+  - name: accimap-db
+    databaseName: accimap
+    user: accimap
+    plan: free                  # offre gratuite : base supprimée après 30 jours (passer à un plan payant pour la garder)
+    region: frankfurt           # région Render la plus proche du Togo
+    postgresMajorVersion: "17"
+    ipAllowList: []             # aucune connexion depuis Internet : uniquement depuis le service web Render
+
+services:
+  - type: web
+    name: accimap
+    runtime: docker
+    plan: free
+    region: frankfurt
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /healthz/
+    envVars:
+      # --- Django
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: "False"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: accimap-db
+          property: connectionString
+      - key: WEB_CONCURRENCY
+        value: "2"
+
+      # --- Compte administrateur initial (créé au premier démarrage, jamais modifié ensuite)
+      - key: ADMIN_PHONE
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+
+      # --- Connexion citoyenne : SMS SIMULÉ (prototype / soutenance, aucun crédit SMS)
+      #     Production réelle : OTP_DEV_MODE=False, SMS_BACKEND=accounts.sms.BrevoSMSBackend, SMS_API_KEY, SMS_SENDER_ID
+      - key: OTP_DEV_MODE
+        value: "True"
+      - key: SMS_BACKEND
+        value: accounts.sms.ConsoleSMSBackend
+
+      # --- Géocodage inverse Nominatim (contact demandé par la politique d'usage d'OpenStreetMap)
+      - key: GEOCODER_CONTACT
+        sync: false
+
+      # --- Données de démonstration (signalements marqués « démonstration ») au premier démarrage
+      - key: SEED_DEMO
+        value: "False"

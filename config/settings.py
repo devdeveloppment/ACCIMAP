@@ -172,6 +172,16 @@ ACCIMAP_SRID = 4326
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+# Cache PARTAGÉ entre tous les processus (gunicorn lance plusieurs workers) : blocage anti-force-brute de la
+# connexion administrateur, limitation Nominatim (1 appel/s pour tout le site) et résultats de géocodage.
+# Table créée par « python manage.py createcachetable » (fait automatiquement au démarrage du conteneur).
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.db.DatabaseCache",
+        "LOCATION": "accimap_cache",
+    }
+}
+
 
 # ---------------------------------------------------------------------------
 # Validation des mots de passe (comptes administrateur)

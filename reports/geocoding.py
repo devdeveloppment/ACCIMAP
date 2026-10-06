@@ -7,14 +7,12 @@ PRINCIPES
   * Le NAVIGATEUR ne contacte jamais le service : c'est le serveur ACCIMAP qui le fait (l'adresse IP de
     l'utilisateur n'est pas transmise). Seules les coordonnées de la position sont envoyées.
   * Politesse envers le service public : cache 24 h par position (~11 m), au plus 1 appel par seconde pour
-    l'ensemble du processus, délai maximal de 3 s, identification par User-Agent.
+    l'ensemble du site (tous processus confondus, via le cache partagé), délai maximal de 3 s, identification par User-Agent.
   * Désactivable : REVERSE_GEOCODING_ENABLED=False. Pour un usage intensif, utiliser votre propre serveur
     Nominatim (GEOCODER_URL), le serveur public d'OpenStreetMap ne convenant pas à un trafic important.
 """
 import json
 import logging
-import threading
-import time
 from urllib.error import URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
@@ -30,8 +28,8 @@ CACHE_SUCCESS_SECONDS = 24 * 3600
 CACHE_FAILURE_SECONDS = 60
 _MISSING = object()
 
-_lock = threading.Lock()
-_last_call = 0.0
+# Limitation GLOBALE (tous les processus gunicorn) : une clé du cache partagé, posée pour 1 s.
+THROTTLE_KEY = "geocode:throttle"
 
 # Éléments d'adresse OSM, du plus fin au plus large.
 LOCAL_KEYS = ("neighbourhood", "quarter", "suburb", "city_district", "hamlet", "village")
@@ -50,13 +48,9 @@ def format_place(payload):
 
 
 def _throttled():
-    global _last_call
-    with _lock:
-        now = time.monotonic()
-        if now - _last_call < MIN_INTERVAL_SECONDS:
-            return True
-        _last_call = now
-        return False
+    """Vrai si un appel a eu lieu il y a moins d'une seconde, dans N'IMPORTE QUEL processus.
+    cache.add n'écrit que si la clé est absente : un seul appel par seconde pour tout le site."""
+    return not cache.add(THROTTLE_KEY, 1, MIN_INTERVAL_SECONDS)
 
 
 def reverse_geocode(latitude, longitude):

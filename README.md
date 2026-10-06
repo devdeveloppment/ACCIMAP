@@ -298,9 +298,10 @@ concentration de signalements* ; ce n'est pas une preuve officielle qu'une zone 
 
 ## Déploiement sur Render
 
-À venir (phase 9) : `Dockerfile` (GeoDjango exige GDAL/GEOS côté serveur web), `render.yaml`, `build`,
-migrations automatiques, collectstatic, variables d'environnement et création du superutilisateur.
-PostGIS est disponible sur Render PostgreSQL (`CREATE EXTENSION postgis;`).
+Prêt à déployer : `Dockerfile` (GeoDjango avec GDAL/GEOS/PROJ), `docker/start.sh` (migrations avec activation de
+PostGIS, cache partagé, compte administrateur initial, gunicorn) et `render.yaml` (Blueprint : service web Docker +
+PostgreSQL). Image testée en conditions de production (HTTPS, `DEBUG=False`, base PostGIS vierge).
+Mode d'emploi pas à pas, variables à saisir et limites de l'offre gratuite : **[docs/DEPLOIEMENT_RENDER.md](docs/DEPLOIEMENT_RENDER.md)**.
 
 ## Bibliothèques tierces embarquées
 

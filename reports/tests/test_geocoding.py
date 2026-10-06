@@ -23,8 +23,7 @@ def fake_response(payload):
 class GeocodingTestMixin:
     def setUp(self):
         super().setUp()
-        cache.clear()
-        geocoding._last_call = 0.0       # pas de limitation héritée d'un autre test
+        cache.clear()   # aucun résultat ni limitation (THROTTLE_KEY) hérités d'un autre test
 
 
 class FormatPlaceTests(SimpleTestCase):
@@ -47,7 +46,12 @@ class FormatPlaceTests(SimpleTestCase):
             self.assertIsNone(format_place(payload))
 
 
-@override_settings(REVERSE_GEOCODING_ENABLED=True, GEOCODER_URL="https://geocoder.test/reverse", GEOCODER_CONTACT="contact@accimap.test")
+# Tests sans base de données (SimpleTestCase) : cache en mémoire, même comportement que le cache partagé en base.
+LOCMEM_CACHE = {"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}}
+
+
+@override_settings(REVERSE_GEOCODING_ENABLED=True, GEOCODER_URL="https://geocoder.test/reverse", GEOCODER_CONTACT="contact@accimap.test",
+                   CACHES=LOCMEM_CACHE)
 class ReverseGeocodeTests(GeocodingTestMixin, SimpleTestCase):
     @patch("reports.geocoding.urlopen")
     def test_appel_et_libelle(self, urlopen):
@@ -72,7 +76,7 @@ class ReverseGeocodeTests(GeocodingTestMixin, SimpleTestCase):
     def test_cache_une_seconde_requete_ne_rappelle_pas_le_service(self, urlopen):
         urlopen.return_value = fake_response(OSM)
         reverse_geocode(6.1319, 1.2228)
-        geocoding._last_call = 0.0
+        cache.delete(geocoding.THROTTLE_KEY)   # une seconde plus tard
         self.assertEqual(reverse_geocode(6.13191, 1.22281), "Hédzranawoé, Lomé")   # même cellule de ~11 m
         self.assertEqual(urlopen.call_count, 1)
 
@@ -82,7 +86,7 @@ class ReverseGeocodeTests(GeocodingTestMixin, SimpleTestCase):
         reverse_geocode(6.10, 1.20)
         self.assertIsNone(reverse_geocode(6.20, 1.30))       # trop rapproché : pas d'appel
         self.assertEqual(urlopen.call_count, 1)
-        geocoding._last_call = 0.0
+        cache.delete(geocoding.THROTTLE_KEY)   # une seconde plus tard
         urlopen.return_value = fake_response(OSM)
         self.assertEqual(reverse_geocode(6.20, 1.30), "Hédzranawoé, Lomé")   # l'échec n'a pas été mis en cache
 
@@ -106,7 +110,7 @@ class ReverseGeocodeTests(GeocodingTestMixin, SimpleTestCase):
     def test_echec_mis_en_cache_brievement(self, urlopen):
         urlopen.side_effect = URLError("x")
         reverse_geocode(6.13, 1.22)
-        geocoding._last_call = 0.0
+        cache.delete(geocoding.THROTTLE_KEY)   # une seconde plus tard
         reverse_geocode(6.13, 1.22)
         self.assertEqual(urlopen.call_count, 1)                # pas de martèlement du service en panne
 

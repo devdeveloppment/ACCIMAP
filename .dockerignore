@@ -1,0 +1,16 @@
+# Jamais dans l'image : secrets, données locales, fichiers générés ou de test.
+.env
+*.env
+.git
+.gitignore
+.dockerignore
+**/__pycache__
+*.py[cod]
+*.log
+.venv
+venv
+media
+staticfiles
+e2e_screenshots
+.vscode
+.idea
