@@ -1,0 +1,37 @@
+{% load static %}<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Connexion | ACCIMAP Administration</title>
+  <link rel="icon" href="{% static 'img/favicon.svg' %}" type="image/svg+xml">
+  <link rel="stylesheet" href="{% static 'vendor/bootstrap/bootstrap.min.css' %}">
+  <link rel="stylesheet" href="{% static 'css/accimap.css' %}">
+</head>
+<body class="admin-auth-body">
+  <main class="admin-auth" id="main">
+    <div class="admin-auth-brand">{% include "includes/logo.html" %}<span>ACCIMAP</span><span class="admin-badge">Administration</span></div>
+    <div class="card admin-auth-card"><div class="card-body p-4">
+      <h1 class="h4 mb-1">Espace d'administration</h1>
+      <p class="text-muted small mb-3">Accès privé réservé aux administrateurs d'ACCIMAP.</p>
+      {% include "includes/messages.html" %}
+      {% if locked_error or form.non_field_errors %}
+      <div class="alert alert-danger" role="alert" id="login-error">
+        {% if locked_error %}<div>{{ locked_error }}</div>{% endif %}
+        {% for error in form.non_field_errors %}<div>{{ error }}</div>{% endfor %}
+      </div>
+      {% endif %}
+      <form method="post" action="{% url 'dashboard:login' %}" id="admin-login-form" data-loading>
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ next }}">
+        {% include "includes/form_field.html" with field=form.username %}
+        {% include "includes/form_field.html" with field=form.password %}
+        <button type="submit" class="btn btn-primary btn-lg w-100" data-loading-text="Connexion…">{% icon "lock" size=18 css="me-2" %}Se connecter</button>
+      </form>
+    </div></div>
+    <a class="admin-auth-back" href="{% url 'home' %}">{% icon "arrow-left" size=16 css="me-1" %}Retour au site public</a>
+  </main>
+  <script src="{% static 'js/app.js' %}" defer></script>
+</body>
+</html>

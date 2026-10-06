@@ -1,0 +1,63 @@
+{% load static accounts_extras %}<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>{% block dash_title %}Tableau de bord{% endblock %} | ACCIMAP Administration</title>
+  <meta name="theme-color" content="#0a2237">
+  <script>document.documentElement.classList.add('js');</script>
+  <link rel="icon" href="{% static 'img/favicon.svg' %}" type="image/svg+xml">
+  <link rel="stylesheet" href="{% static 'vendor/bootstrap/bootstrap.min.css' %}">
+  <link rel="stylesheet" href="{% static 'css/accimap.css' %}">
+  {% block dash_head %}{% endblock %}
+</head>
+<body class="admin-body d-flex flex-column min-vh-100">
+  <a class="visually-hidden-focusable position-absolute p-2 bg-white" href="#main">Aller au contenu</a>
+  {# En-tête PRIVÉ : aucun élément de l'interface citoyenne #}
+  <header class="admin-header" id="admin-header">
+    <div class="container-xl d-flex flex-wrap align-items-center gap-2 py-2">
+      <a class="admin-brand" href="{% url 'dashboard:index' %}">{% include "includes/logo.html" %}<span>ACCIMAP</span><span class="admin-badge">Administration</span></a>
+      <div class="ms-auto d-flex flex-wrap align-items-center gap-2">
+        <span class="admin-user">{% icon "shield-check" size=16 css="me-1" %}{{ user.phone_number|mask_phone }} · {% if user.is_superuser %}Superutilisateur{% else %}Staff{% endif %}</span>
+        <a class="btn btn-sm btn-outline-light" href="{% url 'dashboard:password_change' %}">{% icon "lock" size=16 css="me-1" %}Mot de passe</a>
+        <a class="btn btn-sm btn-outline-light" href="{% url 'home' %}" target="_blank" rel="noopener">{% icon "house" size=16 css="me-1" %}Site public</a>
+        <form method="post" action="{% url 'dashboard:logout' %}" class="m-0">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-sm btn-light" id="admin-logout">{% icon "log-out" size=16 css="me-1" %}Se déconnecter</button>
+        </form>
+      </div>
+    </div>
+  </header>
+
+  <main id="main" class="flex-grow-1">
+    {% include "includes/messages.html" %}
+    {% with current=request.resolver_match.url_name ns=request.resolver_match.namespace %}
+    <div class="container-xl py-3">
+      <nav class="dash-nav mb-3" aria-label="Espace d'administration">
+        <ul class="nav nav-pills flex-nowrap">
+          <li class="nav-item"><a class="nav-link {% if ns == 'dashboard' and current == 'index' %}active{% endif %}" href="{% url 'dashboard:index' %}">{% icon 'layout-dashboard' size=16 css='me-1' %}Vue d'ensemble</a></li>
+          <li class="nav-item"><a class="nav-link {% if current == 'report_list' or current == 'report_detail' or current == 'report_edit' or current == 'report_delete' %}active{% endif %}" href="{% url 'dashboard:report_list' %}">{% icon 'list' size=16 css='me-1' %}Signalements</a></li>
+          <li class="nav-item"><a class="nav-link {% if current == 'statistics' %}active{% endif %}" href="{% url 'dashboard:statistics' %}">{% icon 'chart-column' size=16 css='me-1' %}Statistiques</a></li>
+          <li class="nav-item"><a class="nav-link {% if current == 'map' %}active{% endif %}" href="{% url 'dashboard:map' %}">{% icon 'map' size=16 css='me-1' %}Carte</a></li>
+          <li class="nav-item"><a class="nav-link {% if ns == 'exports' %}active{% endif %}" href="{% url 'exports:index' %}">{% icon 'download' size=16 css='me-1' %}Exports</a></li>
+          {% if user.is_superuser %}
+          <li class="nav-item"><a class="nav-link {% if current == 'user_list' or current == 'user_detail' %}active{% endif %}" href="{% url 'dashboard:user_list' %}">{% icon 'users' size=16 css='me-1' %}Utilisateurs</a></li>
+          <li class="nav-item"><a class="nav-link" href="/admin/admin/logentry/">{% icon 'file-text' size=16 css='me-1' %}Historique</a></li>
+          {% endif %}
+          <li class="nav-item"><a class="nav-link" href="{% url 'admin:index' %}">{% icon 'table-2' size=16 css='me-1' %}Administration avancée</a></li>
+        </ul>
+      </nav>
+      {% block dash_content %}{% endblock %}
+    </div>
+    {% endwith %}
+  </main>
+
+  <footer class="admin-footer">
+    <div class="container-xl small">ACCIMAP · Espace d'administration privé · Données confidentielles : ne pas diffuser.</div>
+  </footer>
+  <script src="{% static 'vendor/bootstrap/bootstrap.bundle.min.js' %}"></script>
+  <script src="{% static 'js/app.js' %}" defer></script>
+  {% block dash_js %}{% endblock %}
+</body>
+</html>

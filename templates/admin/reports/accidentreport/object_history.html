@@ -1,0 +1,25 @@
+{% extends "admin/object_history.html" %}
+{% load accounts_extras %}
+{% comment %}Historique d'un signalement : les utilisateurs apparaissent MASQUÉS (jamais de numéro complet).{% endcomment %}
+{% block content %}
+<div id="content-main">
+  <div class="module">
+    {% if action_list %}
+    <table id="change-history">
+      <thead><tr><th scope="col">Date et heure</th><th scope="col">Utilisateur</th><th scope="col">Action</th></tr></thead>
+      <tbody>
+        {% for action in action_list %}
+        <tr>
+          <td>{{ action.action_time|date:"DATETIME_FORMAT" }}</td>
+          <td>{% if action.user %}{{ action.user.phone_number|mask_phone }}{% else %}—{% endif %}</td>
+          <td>{{ action.get_change_message }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p>Ce signalement n'a pas d'historique de modification.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

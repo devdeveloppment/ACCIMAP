@@ -1,0 +1,21 @@
+<footer class="accimap-footer mt-5 py-4">
+  <div class="container">
+    <div class="row gy-3">
+      <div class="col-12 col-md-6">
+        <div class="d-flex align-items-center gap-2 mb-1">{% include "includes/logo.html" %}<strong>ACCIMAP</strong></div>
+        <p class="small mb-0">Plateforme web participative de collecte et de cartographie des accidents de la circulation.<br>
+        Prototype académique, District Autonome du Grand Lomé.</p>
+      </div>
+      <div class="col-6 col-md-3">
+        <ul class="list-unstyled small mb-0">
+          <li><a href="{% url 'home' %}">Accueil</a></li>
+          <li><a href="{% url 'maps:public_map' %}">Carte</a></li>
+          <li><a href="{% url 'about' %}">À propos</a></li>
+        </ul>
+      </div>
+      <div class="col-6 col-md-3">
+        <p class="small mb-0">Les numéros de téléphone ne sont jamais affichés publiquement.</p>
+      </div>
+    </div>
+  </div>
+</footer>

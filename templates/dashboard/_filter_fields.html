@@ -1,0 +1,35 @@
+{# Champs de filtre partagés (liste, statistiques, carte). Variables : filter_form, show_search #}
+{% if show_search %}
+<div class="col-12 col-lg-4">
+  <label for="{{ filter_form.q.id_for_label }}" class="form-label small fw-semibold mb-1">Recherche</label>
+  {{ filter_form.q }}
+</div>
+{% endif %}
+<div class="col-6 col-lg-2">
+  <label for="{{ filter_form.date_from.id_for_label }}" class="form-label small fw-semibold mb-1">Accident du</label>
+  {{ filter_form.date_from }}
+</div>
+<div class="col-6 col-lg-2">
+  <label for="{{ filter_form.date_to.id_for_label }}" class="form-label small fw-semibold mb-1">au</label>
+  {{ filter_form.date_to }}
+</div>
+<div class="col-6 col-lg-2">
+  <label for="{{ filter_form.status.id_for_label }}" class="form-label small fw-semibold mb-1">Statut</label>
+  {{ filter_form.status }}
+</div>
+<div class="col-6 col-lg-2">
+  <label for="{{ filter_form.mode.id_for_label }}" class="form-label small fw-semibold mb-1">Mode</label>
+  {{ filter_form.mode }}
+</div>
+<div class="col-6 col-lg-3">
+  <label for="{{ filter_form.accident_type.id_for_label }}" class="form-label small fw-semibold mb-1">Type d'accident</label>
+  {{ filter_form.accident_type }}
+</div>
+<div class="col-6 col-lg-3">
+  <label for="{{ filter_form.severity.id_for_label }}" class="form-label small fw-semibold mb-1">Gravité</label>
+  {{ filter_form.severity }}
+</div>
+<div class="col-12 col-lg-3">
+  <label for="{{ filter_form.zone.id_for_label }}" class="form-label small fw-semibold mb-1">Zone de couverture</label>
+  {{ filter_form.zone }}
+</div>

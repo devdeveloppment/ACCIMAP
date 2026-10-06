@@ -1,0 +1,64 @@
+{% extends "dashboard/base_dashboard.html" %}
+{% load static %}
+{% block dash_title %}Carte administrateur{% endblock %}
+{% block dash_head %}
+<link rel="stylesheet" href="{% static 'vendor/leaflet/leaflet.css' %}">
+<link rel="stylesheet" href="{% static 'vendor/leaflet-markercluster/MarkerCluster.css' %}">
+<link rel="stylesheet" href="{% static 'vendor/leaflet-markercluster/MarkerCluster.Default.css' %}">
+{% endblock %}
+
+{% block dash_content %}
+<h1 class="h3 mb-1">Carte administrateur</h1>
+<p class="text-muted small mb-3">
+  <strong>Tous les statuts</strong> sont affichés (en attente, vérifiés, rejetés). Cette carte est privée :
+  la carte publique ne montre que les signalements vérifiés.
+</p>
+
+<div class="card map-toolbar mb-2"><div class="card-body py-2">
+  <div class="d-lg-none">
+    <button class="btn btn-outline-primary w-100" type="button" data-bs-toggle="collapse" data-bs-target="#filters-panel" aria-expanded="false" aria-controls="filters-panel">Filtrer les signalements</button>
+  </div>
+  <div class="collapse d-lg-block mt-2 mt-lg-0" id="filters-panel">
+    <form id="map-filters" class="row g-2 align-items-end">
+      {% include "dashboard/_filter_fields.html" with show_search=False %}
+      <div class="col-12 col-lg-auto"><button type="reset" id="filters-reset" class="btn btn-outline-secondary w-100">Réinitialiser</button></div>
+    </form>
+  </div>
+</div></div>
+
+<div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+  <div class="btn-group" role="group" aria-label="Couches de la carte">
+    <input type="checkbox" class="btn-check" id="toggle-markers" checked autocomplete="off">
+    <label class="btn btn-outline-primary" for="toggle-markers">Marqueurs</label>
+    <input type="checkbox" class="btn-check" id="toggle-heat" autocomplete="off">
+    <label class="btn btn-outline-primary" for="toggle-heat">Concentrations</label>
+  </div>
+  <button type="button" id="fit-btn" class="btn btn-outline-secondary">Recentrer</button>
+  <span id="map-count" class="ms-lg-auto fw-semibold" role="status" aria-live="polite">Chargement…</span>
+</div>
+
+<div id="map-alert" class="alert d-none" role="alert"></div>
+<div class="position-relative">
+  <div id="public-map" role="application" aria-label="Carte administrateur de tous les signalements"></div>
+  <div id="map-loading" class="map-loading" hidden>
+    <div class="spinner-border text-primary" role="status"><span class="visually-hidden">Chargement des signalements…</span></div>
+  </div>
+</div>
+
+<div class="map-legend mt-2 small">
+  <strong class="me-1">Statut :</strong>
+  {% for value, label in statuses %}<span class="legend-item"><i class="sev-dot st-{{ value|lower }}"></i>{{ label }}</span>{% endfor %}
+</div>
+<p class="small text-muted mt-2 mb-0">
+  La heatmap montre les zones à forte concentration de signalements ; ce n'est pas une preuve officielle d'une zone accidentogène.
+  Zone de couverture : {{ zone.label }}.
+</p>
+{{ map_config|json_script:"map-config" }}
+{% endblock %}
+
+{% block dash_js %}
+<script src="{% static 'vendor/leaflet/leaflet.js' %}"></script>
+<script src="{% static 'vendor/leaflet-markercluster/leaflet.markercluster.js' %}"></script>
+<script src="{% static 'vendor/leaflet-heat/leaflet-heat.js' %}"></script>
+<script src="{% static 'js/public_map.js' %}" defer></script>
+{% endblock %}

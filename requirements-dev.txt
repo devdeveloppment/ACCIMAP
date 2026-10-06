@@ -1,0 +1,4 @@
+# Outils de développement et de test (non nécessaires à l'exécution en production)
+-r requirements.txt
+pypdf>=5.0          # lecture du contenu des PDF exportés dans les tests
+playwright>=1.50    # vérifications dans un vrai navigateur (scripts/e2e_*.py) : puis « playwright install chromium »

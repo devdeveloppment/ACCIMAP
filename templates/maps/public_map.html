@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Carte des accidents{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'vendor/leaflet/leaflet.css' %}">
+<link rel="stylesheet" href="{% static 'vendor/leaflet-markercluster/MarkerCluster.css' %}">
+<link rel="stylesheet" href="{% static 'vendor/leaflet-markercluster/MarkerCluster.Default.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container-xl py-3">
+  <h1 class="h3 mb-1">Carte des accidents signalés</h1>
+  <p class="text-muted small mb-3">
+    Seuls les signalements <strong>vérifiés</strong> par un administrateur sont affichés.
+    Données collaboratives, non officielles.
+  </p>
+
+  {# ------------------------------------------------ Filtres #}
+  <div class="card map-toolbar mb-2"><div class="card-body py-2">
+    <div class="d-lg-none">
+      <button class="btn btn-outline-primary w-100" type="button" data-bs-toggle="collapse"
+              data-bs-target="#filters-panel" aria-expanded="false" aria-controls="filters-panel">Filtrer les signalements</button>
+    </div>
+    <div class="collapse d-lg-block mt-2 mt-lg-0" id="filters-panel">
+      <form id="map-filters" class="row g-2 align-items-end">
+        <div class="col-6 col-lg-2">
+          <label for="{{ filter_form.date_from.id_for_label }}" class="form-label small fw-semibold mb-1">Du</label>
+          {{ filter_form.date_from }}
+        </div>
+        <div class="col-6 col-lg-2">
+          <label for="{{ filter_form.date_to.id_for_label }}" class="form-label small fw-semibold mb-1">Au</label>
+          {{ filter_form.date_to }}
+        </div>
+        <div class="col-12 col-sm-6 col-lg-3">
+          <label for="{{ filter_form.accident_type.id_for_label }}" class="form-label small fw-semibold mb-1">Type d'accident</label>
+          {{ filter_form.accident_type }}
+        </div>
+        <div class="col-12 col-sm-6 col-lg-3">
+          <label for="{{ filter_form.severity.id_for_label }}" class="form-label small fw-semibold mb-1">Gravité</label>
+          {{ filter_form.severity }}
+        </div>
+        <div class="col-12 col-lg-2">
+          <button type="reset" id="filters-reset" class="btn btn-outline-secondary w-100">Réinitialiser</button>
+        </div>
+      </form>
+    </div>
+  </div></div>
+
+  {# ------------------------------------------------ Couches + compteur #}
+  <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+    <div class="btn-group" role="group" aria-label="Couches de la carte">
+      <input type="checkbox" class="btn-check" id="toggle-markers" checked autocomplete="off">
+      <label class="btn btn-outline-primary" for="toggle-markers">Marqueurs</label>
+      <input type="checkbox" class="btn-check" id="toggle-heat" autocomplete="off">
+      <label class="btn btn-outline-primary" for="toggle-heat">Heatmap</label>
+    </div>
+    <button type="button" id="fit-btn" class="btn btn-outline-secondary">Recentrer</button>
+    <span id="map-count" class="ms-lg-auto fw-semibold" role="status" aria-live="polite">Chargement…</span>
+  </div>
+
+  <div id="map-alert" class="alert d-none" role="alert"></div>
+
+  <div class="position-relative">
+    <div id="public-map" role="application" aria-label="Carte des accidents vérifiés"></div>
+    <div id="map-loading" class="map-loading" hidden>
+      <div class="spinner-border text-primary" role="status"><span class="visually-hidden">Chargement des signalements…</span></div>
+    </div>
+  </div>
+
+  {# ------------------------------------------------ Légende et mise en garde #}
+  <div class="map-legend mt-2 small">
+    <strong class="me-1">Gravité :</strong>
+    {% for value, label in severities %}
+      <span class="legend-item"><i class="sev-dot sev-{{ value|lower }}"></i>{{ label }}</span>
+    {% endfor %}
+  </div>
+  <div class="alert alert-light border small mt-3 mb-0" role="note">
+    <strong>À propos de la heatmap.</strong> Elle met en évidence les <strong>zones à forte concentration de signalements</strong>
+    vérifiés. Il s'agit d'une représentation des données collectées, et non d'une preuve officielle qu'une zone est
+    accidentogène.
+  </div>
+</div>
+
+{{ map_config|json_script:"map-config" }}
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'vendor/leaflet/leaflet.js' %}"></script>
+<script src="{% static 'vendor/leaflet-markercluster/leaflet.markercluster.js' %}"></script>
+<script src="{% static 'vendor/leaflet-heat/leaflet-heat.js' %}"></script>
+<script src="{% static 'js/public_map.js' %}" defer></script>
+{% endblock %}

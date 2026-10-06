@@ -1,0 +1,49 @@
+{% extends "dashboard/base_dashboard.html" %}
+{% block dash_title %}Modifier {{ report.reference }}{% endblock %}
+{% block dash_content %}
+<a href="{% url 'dashboard:report_detail' report.pk %}" class="small">‹ Retour au signalement</a>
+<h1 class="h3 mt-1 mb-3">Modifier {{ report.reference }}</h1>
+<div class="row"><div class="col-lg-8">
+  <div class="alert alert-info small" role="note">
+    Seuls les détails de l'accident sont modifiables. Le statut, la position et le caractère anonyme du signalement ne
+    peuvent pas être modifiés ici (le statut se change depuis la page du signalement).
+  </div>
+  <form method="post" class="card detail-card" data-loading><div class="card-body">
+    {% csrf_token %}
+    {% include "includes/form_errors.html" %}
+    {% include "includes/form_field.html" with field=form.accident_type %}
+    <div class="row g-3">
+      <div class="col-7">{% include "includes/form_field.html" with field=form.accident_date %}</div>
+      <div class="col-5">{% include "includes/form_field.html" with field=form.accident_time %}</div>
+    </div>
+    <fieldset class="mb-3">
+      <legend class="form-label fw-semibold fs-6">{{ form.severity.label }}</legend>
+      <div class="row row-cols-2 row-cols-sm-4 g-2">
+        {% for radio in form.severity %}
+        <div class="col">
+          <input type="radio" class="btn-check" name="{{ radio.data.name }}" id="{{ radio.id_for_label }}" value="{{ radio.data.value }}" {% if radio.data.selected %}checked{% endif %} required>
+          <label class="btn btn-outline-primary w-100" for="{{ radio.id_for_label }}">{{ radio.choice_label }}</label>
+        </div>
+        {% endfor %}
+      </div>
+      {% for error in form.severity.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+    </fieldset>
+    {% include "includes/form_field.html" with field=form.vehicle_count %}
+    <div class="row g-3">
+      <div class="col-6">{% include "includes/form_field.html" with field=form.injured_count %}</div>
+      <div class="col-6">{% include "includes/form_field.html" with field=form.death_count %}</div>
+    </div>
+    {% include "includes/form_field.html" with field=form.description %}
+    {% if form.remove_photo %}
+    <div class="form-check mb-3">
+      {{ form.remove_photo }}
+      <label class="form-check-label" for="{{ form.remove_photo.id_for_label }}">{{ form.remove_photo.label }}</label>
+    </div>
+    {% endif %}
+    <div class="d-flex flex-wrap gap-2">
+      <button type="submit" class="btn btn-primary" data-loading-text="Enregistrement…">Enregistrer les modifications</button>
+      <a href="{% url 'dashboard:report_detail' report.pk %}" class="btn btn-outline-secondary">Annuler</a>
+    </div>
+  </div></form>
+</div></div>
+{% endblock %}

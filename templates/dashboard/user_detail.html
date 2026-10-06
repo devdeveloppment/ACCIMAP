@@ -1,0 +1,75 @@
+{% extends "dashboard/base_dashboard.html" %}
+{% load static %}
+{% block dash_title %}Gérer {{ target.phone_number }}{% endblock %}
+{% block dash_content %}
+<a href="{% url 'dashboard:user_list' %}" class="small">‹ Retour aux utilisateurs</a>
+<h1 class="h3 mt-1 mb-3" id="user-phone">{{ target.phone_number }}</h1>
+
+<div class="row g-3">
+  <div class="col-lg-5">
+    <div class="card detail-card"><div class="card-body">
+      <h2 class="h5">Compte</h2>
+      <dl class="row mb-0 small detail-list">
+        <dt class="col-6">Niveau d'accès</dt><dd class="col-6" id="user-role">{{ role_label }}</dd>
+        <dt class="col-6">Compte</dt><dd class="col-6">{% if target.is_active %}Actif{% else %}Désactivé{% endif %}</dd>
+        <dt class="col-6">Inscrit le</dt><dd class="col-6">{{ target.date_joined|date:"d/m/Y H:i" }}</dd>
+        <dt class="col-6">Dernière connexion</dt><dd class="col-6">{% if target.last_login %}{{ target.last_login|date:"d/m/Y H:i" }}{% else %}jamais{% endif %}</dd>
+        <dt class="col-6">Signalements identifiés</dt><dd class="col-6">{{ target.report_count }}</dd>
+      </dl>
+    </div></div>
+  </div>
+
+  <div class="col-lg-7">
+    <div class="card detail-card"><div class="card-body">
+      <h2 class="h5">Accès et permissions</h2>
+      {% if is_self %}
+        <div class="alert alert-info mb-0" role="note">C'est votre propre compte : pour éviter de vous verrouiller hors de l'administration, vous ne pouvez ni le désactiver ni réduire vos droits.</div>
+      {% else %}
+      <form method="post" id="access-form" data-loading>
+        {% csrf_token %}
+        {% include "includes/form_errors.html" %}
+        <fieldset class="mb-3">
+          <legend class="form-label fw-semibold fs-6">{{ form.role.label }}</legend>
+          {% for radio in form.role %}
+          <div class="form-check mb-1">
+            <input class="form-check-input" type="radio" name="{{ radio.data.name }}" id="{{ radio.id_for_label }}" value="{{ radio.data.value }}" {% if radio.data.selected %}checked{% endif %}>
+            <label class="form-check-label" for="{{ radio.id_for_label }}">{{ radio.choice_label }}</label>
+          </div>
+          {% endfor %}
+          {% for error in form.role.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+        </fieldset>
+        <div id="staff-permissions" class="border rounded p-3 mb-3 bg-light">
+          <p class="small fw-semibold mb-2">Droits du staff</p>
+          <p class="small text-muted mb-2">Le staff peut toujours consulter le tableau de bord, les statistiques, la liste, le détail, la carte et les photos.</p>
+          <div class="form-check mb-1">{{ form.can_change }}<label class="form-check-label" for="{{ form.can_change.id_for_label }}">{{ form.can_change.label }}</label></div>
+          <div class="form-check">{{ form.can_delete }}<label class="form-check-label" for="{{ form.can_delete.id_for_label }}">{{ form.can_delete.label }}</label></div>
+        </div>
+        <div class="form-check form-switch mb-3">
+          {{ form.is_active }}<label class="form-check-label fw-semibold" for="{{ form.is_active.id_for_label }}">{{ form.is_active.label }}</label>
+          <div class="form-text">Un compte désactivé ne peut plus se connecter ; ses signalements sont conservés.</div>
+        </div>
+        <button type="submit" class="btn btn-primary" data-loading-text="Enregistrement…">Enregistrer</button>
+      </form>
+      {% endif %}
+    </div></div>
+
+    {% if target.is_staff and not is_self %}
+    <div class="card detail-card mt-3"><div class="card-body" id="admin-password-section">
+      <h2 class="h5">Mot de passe de l'espace d'administration</h2>
+      {% if target.has_usable_password %}
+        <p class="small text-success mb-2" id="password-status">Un mot de passe est défini : ce compte peut se connecter à l'espace d'administration.</p>
+      {% else %}
+        <p class="small text-warning-emphasis mb-2" id="password-status">Aucun mot de passe : ce compte ne peut pas encore se connecter à l'espace d'administration.</p>
+      {% endif %}
+      <form method="post" action="{% url 'dashboard:user_set_password' target.pk %}" id="set-password-form" data-loading>
+        {% csrf_token %}
+        {% include "includes/form_field.html" with field=password_form.new_password1 %}
+        {% include "includes/form_field.html" with field=password_form.new_password2 %}
+        <button type="submit" class="btn btn-outline-primary" data-loading-text="Enregistrement…">Définir le mot de passe</button>
+      </form>
+    </div></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+{% block dash_js %}<script src="{% static 'js/user_access.js' %}" defer></script>{% endblock %}

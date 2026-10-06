@@ -1,0 +1,105 @@
+{% extends "dashboard/base_dashboard.html" %}
+{% load static accounts_extras %}
+{% block dash_title %}{{ report.reference }}{% endblock %}
+{% block dash_head %}<link rel="stylesheet" href="{% static 'vendor/leaflet/leaflet.css' %}">{% endblock %}
+
+{% block dash_content %}
+<a href="{% url 'dashboard:report_list' %}" class="small">‹ Retour à la liste</a>
+<div class="d-flex flex-wrap align-items-center gap-2 mt-1 mb-3">
+  <h1 class="h3 mb-0" id="report-reference">{{ report.reference }}</h1>
+  <span id="status-badge">{% include "dashboard/_status_badge.html" with status=report.status label=report.get_status_display %}</span>
+  <span class="badge text-bg-light border">{% if report.is_anonymous %}Anonyme{% else %}Identifié{% endif %}</span>
+  {% include "dashboard/_zone_badge.html" with in_zone=report.in_zone %}
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="card detail-card mb-3"><div class="card-body">
+      <h2 class="h5">Informations</h2>
+      <dl class="row mb-0 detail-list">
+        <dt class="col-sm-4">Type d'accident</dt><dd class="col-sm-8">{{ report.get_accident_type_display }}</dd>
+        <dt class="col-sm-4">Date et heure</dt><dd class="col-sm-8">{{ report.accident_date|date:"d/m/Y" }} à {{ report.accident_time|time:"H:i" }}</dd>
+        <dt class="col-sm-4">Gravité estimée</dt><dd class="col-sm-8">{{ report.get_severity_display }}</dd>
+        <dt class="col-sm-4">Véhicules impliqués</dt><dd class="col-sm-8">{{ report.vehicle_count|default_if_none:"Non renseigné" }}</dd>
+        <dt class="col-sm-4">Blessés</dt><dd class="col-sm-8">{{ report.injured_count }}</dd>
+        <dt class="col-sm-4">Décès</dt><dd class="col-sm-8">{{ report.death_count }}</dd>
+        <dt class="col-sm-4">Description</dt><dd class="col-sm-8">{% if report.description %}{{ report.description|linebreaksbr }}{% else %}<span class="text-muted">Aucune description.</span>{% endif %}</dd>
+        <dt class="col-sm-4">Déclarant</dt>
+        <dd class="col-sm-8" id="declarant">
+          {% if report.is_anonymous %}Anonyme <span class="text-muted">(aucune identité enregistrée)</span>
+          {% elif report.user %}Identifié <span class="text-muted">({{ report.user.phone_number|mask_phone }})</span>
+            {% if user.is_superuser %} · <a href="{% url 'dashboard:user_detail' report.user.pk %}">Voir le compte</a>{% endif %}
+          {% else %}Identifié <span class="text-muted">(compte supprimé)</span>{% endif %}
+        </dd>
+      </dl>
+    </div></div>
+
+    <div class="card detail-card mb-3"><div class="card-body">
+      <h2 class="h5">Localisation</h2>
+      <p class="mb-2">
+        <span class="text-muted">Latitude</span> <strong id="detail-lat">{{ report.latitude|floatformat:"6u" }}</strong>
+        · <span class="text-muted">Longitude</span> <strong id="detail-lon">{{ report.longitude|floatformat:"6u" }}</strong>
+        · {% include "dashboard/_zone_badge.html" with in_zone=report.in_zone %}
+      </p>
+      <div id="detail-map" role="application" aria-label="Position du signalement"></div>
+      <p class="small text-muted mt-1 mb-0">{{ zone.label }}.{% if zone.disclaimer %} {{ zone.disclaimer }}{% endif %}</p>
+    </div></div>
+
+    <div class="card detail-card mb-3"><div class="card-body">
+      <h2 class="h5">Photographie</h2>
+      {% if report.photo %}
+        <img id="report-photo" src="{% url 'dashboard:report_photo' report.pk %}" alt="Photo du signalement {{ report.reference }}" class="img-fluid rounded detail-photo">
+        <p class="small text-muted mt-2 mb-0">Visible uniquement dans l'espace administrateur. Les métadonnées (GPS, appareil) ont été supprimées à l'envoi.</p>
+      {% else %}
+        <p class="text-muted mb-0">Aucune photo jointe.</p>
+      {% endif %}
+    </div></div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="card detail-card mb-3"><div class="card-body">
+      <h2 class="h5">Traitement</h2>
+      {% if perms.reports.change_accidentreport %}
+      <form method="post" action="{% url 'dashboard:report_review' report.pk %}" id="review-form" data-loading>
+        {% csrf_token %}
+        <label for="{{ review_form.admin_note.id_for_label }}" class="form-label fw-semibold">Note de l'administrateur</label>
+        {{ review_form.admin_note }}
+        <div class="d-grid gap-2 mt-3">
+          {% if report.status != "VERIFIED" %}<button type="submit" name="status" value="VERIFIED" class="btn btn-success" data-loading-text="Enregistrement…">Vérifier ce signalement</button>{% endif %}
+          {% if report.status != "REJECTED" %}<button type="submit" name="status" value="REJECTED" class="btn btn-outline-danger" data-loading-text="Enregistrement…">Rejeter</button>{% endif %}
+          {% if report.status != "PENDING" %}<button type="submit" name="status" value="PENDING" class="btn btn-outline-secondary" data-loading-text="Enregistrement…">Remettre en attente</button>{% endif %}
+          <button type="submit" name="status" value="{{ report.status }}" class="btn btn-outline-primary" data-loading-text="Enregistrement…">Enregistrer la note seulement</button>
+        </div>
+      </form>
+      {% else %}
+      <p class="mb-1"><span class="text-muted">Note :</span> {% if report.admin_note %}{{ report.admin_note|linebreaksbr }}{% else %}<span class="text-muted">aucune</span>{% endif %}</p>
+      <p class="small text-muted mb-0">Vous pouvez consulter ce signalement, mais pas le modifier.</p>
+      {% endif %}
+    </div></div>
+
+    <div class="card detail-card mb-3"><div class="card-body">
+      <h2 class="h5">Suivi</h2>
+      <dl class="row mb-0 small detail-list">
+        <dt class="col-5">Signalé le</dt><dd class="col-7">{{ report.created_at|date:"d/m/Y H:i" }}</dd>
+        <dt class="col-5">Modifié le</dt><dd class="col-7">{{ report.updated_at|date:"d/m/Y H:i" }}</dd>
+        <dt class="col-5">Traité par</dt><dd class="col-7">{% if report.verified_by %}{{ report.verified_by.phone_number|mask_phone }}{% else %}<span class="text-muted">—</span>{% endif %}</dd>
+        <dt class="col-5">Traité le</dt><dd class="col-7">{% if report.verified_at %}{{ report.verified_at|date:"d/m/Y H:i" }}{% else %}<span class="text-muted">—</span>{% endif %}</dd>
+        <dt class="col-5">Donnée de démonstration</dt><dd class="col-7">{% if report.is_demo %}Oui{% else %}Non{% endif %}</dd>
+      </dl>
+    </div></div>
+
+    {% if perms.reports.change_accidentreport or perms.reports.delete_accidentreport %}
+    <div class="card detail-card"><div class="card-body d-grid gap-2">
+      <h2 class="h5">Actions</h2>
+      {% if perms.reports.change_accidentreport %}<a class="btn btn-outline-primary" href="{% url 'dashboard:report_edit' report.pk %}" id="edit-link">Modifier le signalement</a>{% endif %}
+      {% if perms.reports.delete_accidentreport %}<a class="btn btn-outline-danger" href="{% url 'dashboard:report_delete' report.pk %}" id="delete-link">Supprimer le signalement</a>{% endif %}
+    </div></div>
+    {% endif %}
+  </div>
+</div>
+{{ map_config|json_script:"map-config" }}
+{% endblock %}
+{% block dash_js %}
+<script src="{% static 'vendor/leaflet/leaflet.js' %}"></script>
+<script src="{% static 'js/detail_map.js' %}" defer></script>
+{% endblock %}

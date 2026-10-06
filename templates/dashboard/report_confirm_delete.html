@@ -1,0 +1,23 @@
+{% extends "dashboard/base_dashboard.html" %}
+{% block dash_title %}Supprimer {{ report.reference }}{% endblock %}
+{% block dash_content %}
+<div class="row justify-content-center"><div class="col-md-8 col-lg-6">
+  <div class="card detail-card border-danger"><div class="card-body">
+    <h1 class="h4 text-danger">Supprimer ce signalement ?</h1>
+    <p>Cette action est <strong>définitive</strong> : le signalement{% if report.photo %} et sa photo{% endif %} seront effacés de la base.
+       Pour écarter un signalement sans l'effacer, utilisez plutôt le statut « Rejeté ».</p>
+    <dl class="row small detail-list mb-3" id="delete-summary">
+      <dt class="col-5">Référence</dt><dd class="col-7">{{ report.reference }}</dd>
+      <dt class="col-5">Type</dt><dd class="col-7">{{ report.get_accident_type_display }}</dd>
+      <dt class="col-5">Accident</dt><dd class="col-7">{{ report.accident_date|date:"d/m/Y" }} à {{ report.accident_time|time:"H:i" }}</dd>
+      <dt class="col-5">Statut</dt><dd class="col-7">{{ report.get_status_display }}</dd>
+      <dt class="col-5">Photo</dt><dd class="col-7">{% if report.photo %}Oui{% else %}Non{% endif %}</dd>
+    </dl>
+    <form method="post" class="d-flex flex-wrap gap-2" data-loading>
+      {% csrf_token %}
+      <button type="submit" class="btn btn-danger" id="confirm-delete" data-loading-text="Suppression…">Supprimer définitivement</button>
+      <a href="{% url 'dashboard:report_detail' report.pk %}" class="btn btn-outline-secondary" id="cancel-delete">Annuler</a>
+    </form>
+  </div></div>
+</div></div>
+{% endblock %}

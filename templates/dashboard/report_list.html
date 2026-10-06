@@ -1,0 +1,77 @@
+{% extends "dashboard/base_dashboard.html" %}
+{% block dash_title %}Signalements{% endblock %}
+{% block dash_content %}
+<div class="d-flex flex-wrap justify-content-between align-items-end gap-2 mb-3">
+  <div>
+    <h1 class="h3 mb-0">Signalements</h1>
+    <p class="text-muted small mb-0" id="list-count" role="status">
+      {{ page.paginator.count }} signalement{{ page.paginator.count|pluralize }}{% if filters_active %} correspondant aux filtres{% endif %}
+    </p>
+  </div>
+  <div class="d-flex flex-wrap gap-2">
+    <a class="btn btn-outline-primary" href="{% url 'dashboard:map' %}{% if querystring %}?{{ querystring }}{% endif %}">{% icon "map" size=18 css="me-1" %}Voir sur la carte</a>
+    <a class="btn btn-outline-primary" id="export-link" href="{% url 'exports:index' %}{% if querystring %}?{{ querystring }}{% endif %}">{% icon "download" size=18 css="me-1" %}Exporter ces résultats</a>
+  </div>
+</div>
+
+{% include "dashboard/_filter_errors.html" %}
+<div class="card map-toolbar mb-3"><div class="card-body py-2">
+  <div class="d-lg-none">
+    <button class="btn btn-outline-primary w-100" type="button" data-bs-toggle="collapse" data-bs-target="#filters-panel" aria-expanded="false" aria-controls="filters-panel">Recherche et filtres{% if filters_active %} (actifs){% endif %}</button>
+  </div>
+  <div class="collapse d-lg-block mt-2 mt-lg-0" id="filters-panel">
+    <form method="get" class="row g-2 align-items-end" id="list-filters">
+      {% include "dashboard/_filter_fields.html" with show_search=True %}
+      <div class="col-12 col-lg-3">
+        <label for="sort" class="form-label small fw-semibold mb-1">Trier par</label>
+        <select name="sort" id="sort" class="form-select">
+          {% for value, label in sort_labels %}<option value="{{ value }}" {% if value == sort %}selected{% endif %}>{{ label }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="col-12 col-lg-auto d-flex gap-2">
+        <button type="submit" class="btn btn-primary">Filtrer</button>
+        <a href="{% url 'dashboard:report_list' %}" class="btn btn-outline-secondary">Réinitialiser</a>
+      </div>
+    </form>
+  </div>
+</div></div>
+
+<div class="card"><div class="table-responsive">
+  <table class="table table-hover align-middle mb-0" id="report-table">
+    <thead>
+      <tr>
+        <th>Référence</th><th>Type</th><th class="d-none d-sm-table-cell">Accident</th>
+        <th class="d-none d-md-table-cell">Gravité</th><th>Statut</th>
+        <th class="d-none d-lg-table-cell">Mode</th><th class="d-none d-lg-table-cell">Zone</th>
+        <th class="d-none d-xl-table-cell">Signalé le</th><th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in page %}
+      <tr>
+        <td class="fw-semibold text-nowrap"><a href="{% url 'dashboard:report_detail' r.pk %}">{{ r.reference }}</a></td>
+        <td>{{ r.get_accident_type_display }}</td>
+        <td class="d-none d-sm-table-cell text-nowrap">{{ r.accident_date|date:"d/m/Y" }}</td>
+        <td class="d-none d-md-table-cell">{{ r.get_severity_display }}</td>
+        <td>{% include "dashboard/_status_badge.html" with status=r.status label=r.get_status_display %}</td>
+        <td class="d-none d-lg-table-cell">{% if r.is_anonymous %}Anonyme{% else %}Identifié{% endif %}</td>
+        <td class="d-none d-lg-table-cell">{% include "dashboard/_zone_badge.html" with in_zone=r.in_zone %}</td>
+        <td class="d-none d-xl-table-cell text-nowrap">{{ r.created_at|date:"d/m/Y H:i" }}</td>
+        <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="{% url 'dashboard:report_detail' r.pk %}">Ouvrir</a></td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="9" class="text-center text-muted py-4">Aucun signalement ne correspond à ces critères.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div></div>
+
+{% if page.paginator.num_pages > 1 %}
+<nav class="d-flex justify-content-between align-items-center mt-3" aria-label="Pagination">
+  {% if page.has_previous %}<a class="btn btn-outline-primary" href="?{% if querystring %}{{ querystring }}&amp;{% endif %}page={{ page.previous_page_number }}">‹ Précédent</a>{% else %}<span></span>{% endif %}
+  <span class="small text-muted">Page {{ page.number }} sur {{ page.paginator.num_pages }}</span>
+  {% if page.has_next %}<a class="btn btn-outline-primary" href="?{% if querystring %}{{ querystring }}&amp;{% endif %}page={{ page.next_page_number }}">Suivant ›</a>{% else %}<span></span>{% endif %}
+</nav>
+{% endif %}
+<p class="small text-muted mt-3 mb-0">Zone : {{ zone.label }}.{% if zone.disclaimer %} {{ zone.disclaimer }}{% endif %}</p>
+{% endblock %}

@@ -1,0 +1,72 @@
+{% extends "dashboard/base_dashboard.html" %}
+{% block dash_title %}Utilisateurs{% endblock %}
+{% block dash_content %}
+<div class="mb-3">
+  <h1 class="h3 mb-0">Utilisateurs</h1>
+  <p class="text-muted small mb-0">Réservé aux superutilisateurs. Les numéros de téléphone ne sont visibles que dans cet espace.</p>
+</div>
+
+<div class="card map-toolbar mb-3"><div class="card-body py-2">
+  <form method="get" class="row g-2 align-items-end" id="user-filters">
+    <div class="col-12 col-md-4">
+      <label for="q" class="form-label small fw-semibold mb-1">Numéro de téléphone</label>
+      <input type="search" name="q" id="q" value="{{ search }}" class="form-control" placeholder="Ex. 90 12 34 56" inputmode="tel">
+    </div>
+    <div class="col-6 col-md-3">
+      <label for="role" class="form-label small fw-semibold mb-1">Niveau d'accès</label>
+      <select name="role" id="role" class="form-select">
+        <option value="">Tous</option>
+        <option value="user" {% if role == "user" %}selected{% endif %}>Utilisateurs</option>
+        <option value="staff" {% if role == "staff" %}selected{% endif %}>Staff</option>
+        <option value="superuser" {% if role == "superuser" %}selected{% endif %}>Superutilisateurs</option>
+      </select>
+    </div>
+    <div class="col-6 col-md-2">
+      <label for="active" class="form-label small fw-semibold mb-1">Compte</label>
+      <select name="active" id="active" class="form-select">
+        <option value="">Tous</option>
+        <option value="1" {% if active == "1" %}selected{% endif %}>Actifs</option>
+        <option value="0" {% if active == "0" %}selected{% endif %}>Désactivés</option>
+      </select>
+    </div>
+    <div class="col-12 col-md-auto d-flex gap-2">
+      <button type="submit" class="btn btn-primary">Filtrer</button>
+      <a href="{% url 'dashboard:user_list' %}" class="btn btn-outline-secondary">Réinitialiser</a>
+    </div>
+  </form>
+</div></div>
+
+<p class="small text-muted" role="status">{{ page.paginator.count }} utilisateur{{ page.paginator.count|pluralize }}</p>
+<div class="card"><div class="table-responsive">
+  <table class="table table-hover align-middle mb-0" id="user-table">
+    <thead><tr>
+      <th>Téléphone</th><th>Niveau</th><th>Compte</th>
+      <th class="d-none d-md-table-cell">Inscrit le</th><th class="d-none d-lg-table-cell">Dernière connexion</th>
+      <th class="d-none d-sm-table-cell text-end">Signalements identifiés</th><th></th>
+    </tr></thead>
+    <tbody>
+      {% for item in users %}
+      <tr>
+        <td class="fw-semibold text-nowrap">{{ item.obj.phone_number }}</td>
+        <td>{{ item.role }}</td>
+        <td>{% if item.obj.is_active %}<span class="badge text-bg-success">Actif</span>{% else %}<span class="badge text-bg-secondary">Désactivé</span>{% endif %}</td>
+        <td class="d-none d-md-table-cell text-nowrap">{{ item.obj.date_joined|date:"d/m/Y" }}</td>
+        <td class="d-none d-lg-table-cell text-nowrap">{% if item.obj.last_login %}{{ item.obj.last_login|date:"d/m/Y H:i" }}{% else %}<span class="text-muted">jamais</span>{% endif %}</td>
+        <td class="d-none d-sm-table-cell text-end">{{ item.obj.report_count }}</td>
+        <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="{% url 'dashboard:user_detail' item.obj.pk %}">Gérer</a></td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="7" class="text-center text-muted py-4">Aucun utilisateur ne correspond à ces critères.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div></div>
+
+{% if page.paginator.num_pages > 1 %}
+<nav class="d-flex justify-content-between align-items-center mt-3" aria-label="Pagination">
+  {% if page.has_previous %}<a class="btn btn-outline-primary" href="?{% if querystring %}{{ querystring }}&amp;{% endif %}page={{ page.previous_page_number }}">‹ Précédent</a>{% else %}<span></span>{% endif %}
+  <span class="small text-muted">Page {{ page.number }} sur {{ page.paginator.num_pages }}</span>
+  {% if page.has_next %}<a class="btn btn-outline-primary" href="?{% if querystring %}{{ querystring }}&amp;{% endif %}page={{ page.next_page_number }}">Suivant ›</a>{% else %}<span></span>{% endif %}
+</nav>
+{% endif %}
+{% endblock %}

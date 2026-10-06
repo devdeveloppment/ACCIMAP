@@ -1,0 +1,10 @@
+{% extends "admin/base.html" %}
+{% load accounts_extras %}
+{% block title %}{% if subtitle %}{{ subtitle }} | {% endif %}{{ title }} | {{ site_title|default:"Administration" }}{% endblock %}
+{% block branding %}
+<div id="site-name"><a href="{% url 'admin:index' %}">{{ site_header|default:"Administration" }}</a></div>
+{% endblock %}
+{% block nav-global %}
+<a href="{% url 'dashboard:index' %}" style="color:#fff;margin-left:1rem;">Retour au tableau de bord ACCIMAP</a>
+{% endblock %}
+{% block welcome-msg %}Connecté : <strong>{{ user.phone_number|mask_phone }}</strong>.{% endblock %}

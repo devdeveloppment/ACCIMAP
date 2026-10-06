@@ -1,0 +1,35 @@
+{# Variables : full (True : tous les graphiques) #}
+<div class="row g-3">
+  <div class="col-12 {% if full %}col-xl-8{% else %}col-lg-8{% endif %}">
+    <div class="card chart-card h-100"><div class="card-body">
+      <h2 class="h6">Accidents par période</h2>
+      <div class="chart-box"><canvas id="chart-period" role="img" aria-label="Graphique : nombre d'accidents par période"></canvas></div>
+    </div></div>
+  </div>
+  <div class="col-12 col-md-6 {% if full %}col-xl-4{% else %}col-lg-4{% endif %}">
+    <div class="card chart-card h-100"><div class="card-body">
+      <h2 class="h6">Signalements par statut</h2>
+      <div class="chart-box"><canvas id="chart-statuses" role="img" aria-label="Graphique : signalements par statut"></canvas></div>
+    </div></div>
+  </div>
+  <div class="col-12 col-md-6 {% if full %}col-xl-5{% else %}col-lg-12{% endif %}">
+    <div class="card chart-card h-100"><div class="card-body">
+      <h2 class="h6">Accidents par type</h2>
+      <div class="chart-box chart-box-tall"><canvas id="chart-types" role="img" aria-label="Graphique : accidents par type"></canvas></div>
+    </div></div>
+  </div>
+  {% if full %}
+  <div class="col-12 col-md-6 col-xl-4">
+    <div class="card chart-card h-100"><div class="card-body">
+      <h2 class="h6">Accidents par gravité</h2>
+      <div class="chart-box"><canvas id="chart-severities" role="img" aria-label="Graphique : accidents par gravité"></canvas></div>
+    </div></div>
+  </div>
+  <div class="col-12 col-md-6 col-xl-3">
+    <div class="card chart-card h-100"><div class="card-body">
+      <h2 class="h6">Identifiés / anonymes</h2>
+      <div class="chart-box"><canvas id="chart-modes" role="img" aria-label="Graphique : signalements identifiés et anonymes"></canvas></div>
+    </div></div>
+  </div>
+  {% endif %}
+</div>

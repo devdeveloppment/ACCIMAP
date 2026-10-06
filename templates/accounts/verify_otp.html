@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Vérification du code{% endblock %}
+{% block content %}
+<div class="container py-4 py-md-5">
+  <div class="row justify-content-center"><div class="col-12 col-sm-10 col-md-7 col-lg-5">
+
+    {% if dev_mode %}
+    {# Outil de développement / soutenance : jamais rendu si OTP_DEV_MODE=False (double garde dans la vue). #}
+    <div class="alert alert-warning dev-banner" role="note" id="dev-banner" aria-label="Mode développement, SMS simulé">
+      <div class="d-flex align-items-center gap-2 mb-2">
+        {% icon "info" size=18 %}
+        <span class="badge text-bg-dark">MODE DÉVELOPPEMENT</span>
+        <strong>SMS simulé</strong>
+      </div>
+      <div class="small mb-1">Aucun SMS réel n'est envoyé. Destinataire : <strong>{{ masked_phone }}</strong></div>
+      {% if dev_code %}
+        <div>Code OTP : <span class="dev-code" id="dev-code">{{ dev_code }}</span></div>
+        <div class="small mt-1">Ce code est visible uniquement en mode simulation, pour les tests et la démonstration.
+          Il est vérifié exactement comme un code reçu par SMS.</div>
+      {% else %}
+        <div class="small">Le message simulé est affiché dans la console du serveur.</div>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <div class="card auth-card shadow-sm"><div class="card-body p-4">
+      <h1 class="h3 mb-1">Saisissez votre code</h1>
+      <p class="text-muted">Un code à {{ form.code.field.widget.attrs.maxlength }} chiffres a été envoyé au <strong>{{ masked_phone }}</strong>. Il expire dans {{ expiry_minutes }} minutes.</p>
+      <form method="post" data-loading>
+        {% csrf_token %}
+        {% include "includes/form_errors.html" %}
+        {% include "includes/form_field.html" with field=form.code %}
+        <button type="submit" class="btn btn-primary btn-lg w-100" data-loading-text="Vérification…">Vérifier et me connecter</button>
+      </form>
+      <hr class="my-4">
+      <div class="d-flex flex-column flex-sm-row gap-2 justify-content-between align-items-sm-center">
+        <form method="post" action="{% url 'accounts:resend_otp' %}" class="m-0">
+          {% csrf_token %}
+          <button type="submit" id="resend-btn" class="btn btn-outline-primary w-100" data-remaining="{{ resend_remaining }}">
+            Renvoyer le code<span data-count></span>
+          </button>
+        </form>
+        <a class="btn btn-link" href="{% url 'accounts:login' %}">Changer de numéro</a>
+      </div>
+    </div></div>
+  </div></div>
+</div>
+{% endblock %}
+{% block extra_js %}<script src="{% static 'js/otp.js' %}" defer></script>{% endblock %}

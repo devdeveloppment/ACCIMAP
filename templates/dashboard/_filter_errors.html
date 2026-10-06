@@ -1,0 +1,6 @@
+{% if filter_form.errors %}
+<div class="alert alert-danger" role="alert">
+  <strong>Filtres invalides : aucun résultat n'est affiché.</strong>
+  <ul class="mb-0">{% for field, errors in filter_form.errors.items %}{% for error in errors %}<li>{{ error }}</li>{% endfor %}{% endfor %}</ul>
+</div>
+{% endif %}

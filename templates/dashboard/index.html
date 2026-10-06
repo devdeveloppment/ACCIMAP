@@ -1,0 +1,49 @@
+{% extends "dashboard/base_dashboard.html" %}
+{% load static %}
+{% block dash_title %}Vue d'ensemble{% endblock %}
+{% block dash_content %}
+<div class="d-flex flex-wrap justify-content-between align-items-end gap-2 mb-3">
+  <div>
+    <h1 class="h3 mb-0">Tableau de bord</h1>
+    <p class="text-muted small mb-0">Chiffres calculés en direct à partir de la base de données.</p>
+  </div>
+  <a class="btn btn-outline-primary" href="{% url 'dashboard:statistics' %}">Statistiques détaillées et filtres</a>
+</div>
+
+{% include "dashboard/_stats_cards.html" %}
+{% include "dashboard/_charts.html" with full=False %}
+
+<div class="card mt-3" id="pending-queue"><div class="card-body">
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+    <h2 class="h5 mb-0">À traiter ({{ stats.counts.pending }} en attente)</h2>
+    <a class="btn btn-sm btn-outline-primary" href="{% url 'dashboard:report_list' %}?status=PENDING">Voir tous les signalements en attente</a>
+  </div>
+  {% if pending_reports %}
+  <div class="table-responsive">
+    <table class="table table-sm align-middle mb-0">
+      <thead><tr><th>Référence</th><th>Type</th><th class="d-none d-sm-table-cell">Date</th><th>Gravité</th><th class="d-none d-md-table-cell">Mode</th><th></th></tr></thead>
+      <tbody>
+        {% for r in pending_reports %}
+        <tr>
+          <td class="fw-semibold">{{ r.reference }}</td>
+          <td>{{ r.get_accident_type_display }}</td>
+          <td class="d-none d-sm-table-cell">{{ r.accident_date|date:"d/m/Y" }}</td>
+          <td>{{ r.get_severity_display }}</td>
+          <td class="d-none d-md-table-cell">{% if r.is_anonymous %}Anonyme{% else %}Identifié{% endif %}</td>
+          <td class="text-end"><a class="btn btn-sm btn-primary" href="{% url 'dashboard:report_detail' r.pk %}">Examiner</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="text-muted mb-0">Aucun signalement en attente de vérification.</p>
+  {% endif %}
+</div></div>
+
+{{ chart_data|json_script:"chart-data" }}
+{% endblock %}
+{% block dash_js %}
+<script src="{% static 'vendor/chartjs/chart.umd.js' %}"></script>
+<script src="{% static 'js/dashboard_charts.js' %}" defer></script>
+{% endblock %}

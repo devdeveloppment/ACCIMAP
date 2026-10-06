@@ -1,0 +1,27 @@
+{% load static %}<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Accueil{% endblock %} | ACCIMAP</title>
+  <meta name="description" content="ACCIMAP : plateforme web participative de collecte et de cartographie des accidents de la circulation dans le Grand Lomé.">
+  <meta name="theme-color" content="#0f2f4f">
+  <script>document.documentElement.classList.add('js');</script>
+  <link rel="icon" href="{% static 'img/favicon.svg' %}" type="image/svg+xml">
+  <link rel="stylesheet" href="{% static 'vendor/bootstrap/bootstrap.min.css' %}">
+  <link rel="stylesheet" href="{% static 'css/accimap.css' %}">
+  {% block extra_head %}{% endblock %}
+</head>
+<body class="d-flex flex-column min-vh-100">
+  <a class="visually-hidden-focusable position-absolute p-2 bg-white" href="#main">Aller au contenu</a>
+  {% include "includes/navbar.html" %}
+  <main id="main" class="flex-grow-1">
+    {% include "includes/messages.html" %}
+    {% block content %}{% endblock %}
+  </main>
+  {% include "includes/footer.html" %}
+  <script src="{% static 'vendor/bootstrap/bootstrap.bundle.min.js' %}"></script>
+  <script src="{% static 'js/app.js' %}" defer></script>
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,271 @@
+{% extends "base.html" %}
+{% load static accounts_extras %}
+{% block title %}{% if is_anonymous %}Signaler anonymement{% else %}Signaler un accident{% endif %}{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'vendor/leaflet/leaflet.css' %}">{% endblock %}
+
+{% block content %}
+<div class="report-wizard" id="report-wizard">
+<div class="container py-3 py-md-4"><div class="row justify-content-center"><div class="col-lg-9 col-xl-8">
+
+  {# ------------------------------------------------ En-tête : titre, mode, progression #}
+  <header class="wizard-header">
+    <div class="d-flex align-items-center justify-content-between gap-2 mb-3">
+      <h1 class="h4 mb-0">{% if is_anonymous %}Signaler anonymement{% else %}Signaler un accident{% endif %}</h1>
+      <span class="mode-chip" id="mode-chip">
+        {% if is_anonymous %}{% icon "venetian-mask" size=16 %}<span>Anonyme</span>{% else %}{% icon "user-round" size=16 %}<span>Connecté</span>{% endif %}
+      </span>
+    </div>
+    <ol class="stepper" id="stepper" aria-label="Étapes du signalement">
+      <li class="stepper-item" data-step="1"><button type="button" class="stepper-btn" data-goto="1"><span class="stepper-dot"><span class="stepper-num">1</span>{% icon "check" size=14 css="stepper-check" %}</span><span class="stepper-label">Type</span></button></li>
+      <li class="stepper-item" data-step="2"><button type="button" class="stepper-btn" data-goto="2"><span class="stepper-dot"><span class="stepper-num">2</span>{% icon "check" size=14 css="stepper-check" %}</span><span class="stepper-label">Lieu</span></button></li>
+      <li class="stepper-item" data-step="3"><button type="button" class="stepper-btn" data-goto="3"><span class="stepper-dot"><span class="stepper-num">3</span>{% icon "check" size=14 css="stepper-check" %}</span><span class="stepper-label">Détails</span></button></li>
+      <li class="stepper-item" data-step="4"><button type="button" class="stepper-btn" data-goto="4"><span class="stepper-dot"><span class="stepper-num">4</span>{% icon "check" size=14 css="stepper-check" %}</span><span class="stepper-label">Envoi</span></button></li>
+    </ol>
+    <div class="wizard-progress" role="progressbar" aria-label="Progression" aria-valuemin="1" aria-valuemax="4" aria-valuenow="1" id="wizard-progress">
+      <div class="wizard-progress-bar" id="wizard-progress-bar"></div>
+    </div>
+  </header>
+
+  <form method="post" enctype="multipart/form-data" id="report-form" data-loading
+        data-declarant="{% if is_anonymous %}Signalement anonyme : aucune identité n'est enregistrée.{% if user.is_authenticated %} Vous êtes connecté, mais ce signalement ne sera pas rattaché à votre compte.{% endif %}{% else %}Rattaché à votre compte ({{ user.phone_number|mask_phone }}). Votre numéro n'est jamais affiché publiquement.{% endif %}"
+        data-anonymous="{% if is_anonymous %}1{% else %}0{% endif %}">
+    {% csrf_token %}
+    {% include "includes/form_errors.html" %}
+
+    {# ================================================ ÉTAPE 1 : TYPE #}
+    <section class="report-step" data-step="1" aria-labelledby="step1-title">
+      <h2 class="step-title" id="step1-title" tabindex="-1">Que s'est-il passé ?</h2>
+      <p class="step-lead">Choisissez le type d'accident. Touchez une carte pour continuer.</p>
+      {% if is_anonymous %}
+      <div class="mode-note" role="note" id="mode-note">
+        {% icon "venetian-mask" size=20 css="mt-1" %}
+        <div><strong>Signalement anonyme.</strong> Aucune identité n'est demandée ni enregistrée.
+        {% if user.is_authenticated %}Connecté, mais ce signalement ne sera <strong>pas</strong> rattaché à votre compte.{% endif %}</div>
+      </div>
+      {% else %}
+      <div class="mode-note" role="note" id="mode-note">
+        {% icon "shield-check" size=20 css="mt-1" %}
+        <div>Connecté : <strong>{{ user.phone_number|mask_phone }}</strong>. Signalement rattaché à votre compte, numéro jamais affiché publiquement.</div>
+      </div>
+      {% endif %}
+      <div class="type-grid" role="radiogroup" aria-labelledby="step1-title" id="type-grid">
+        {% for card in type_cards %}
+        <label class="type-card" for="type-{{ card.value }}">
+          <input type="radio" class="type-radio" name="accident_type" id="type-{{ card.value }}" value="{{ card.value }}"
+                 data-label="{{ card.label }}" required {% if form.accident_type.value == card.value %}checked{% endif %}>
+          <span class="type-icon">{% icon card.icon size=28 %}</span>
+          <span class="type-name">{{ card.label }}</span>
+          <span class="type-hint">{{ card.hint }}</span>
+          <span class="type-tick">{% icon "check" size=14 %}</span>
+        </label>
+        {% endfor %}
+      </div>
+      {% for error in form.accident_type.errors %}<div class="invalid-feedback d-block mt-2">{{ error }}</div>{% endfor %}
+      <div id="type-error" class="invalid-feedback d-block mt-2" role="alert" hidden>Veuillez choisir un type d'accident.</div>
+      <div class="step-actions">
+        <button type="button" class="btn btn-primary btn-lg flex-grow-1" id="step1-next" data-next>Continuer {% icon "arrow-right" size=20 css="ms-1" %}</button>
+      </div>
+    </section>
+
+    {# ================================================ ÉTAPE 2 : LIEU #}
+    <section class="report-step" data-step="2" aria-labelledby="step2-title">
+      <h2 class="step-title" id="step2-title" tabindex="-1">Où cela s'est-il passé ?</h2>
+      <p class="step-lead" id="location-lead">Nous cherchons votre position. Vous pouvez aussi toucher la carte pour placer le repère.</p>
+      <div id="location-status" class="alert d-none" role="status" aria-live="polite"></div>
+      <noscript><div class="alert alert-warning">JavaScript est désactivé : saisissez la latitude et la longitude manuellement.</div></noscript>
+
+      <div id="location-map" role="application" aria-label="Carte pour choisir le lieu de l'accident"></div>
+      <p class="small text-muted mt-1 mb-3" id="zone-caption">Tracé pointillé : {{ zone.label }}.{% if zone.disclaimer %} {{ zone.disclaimer }}{% endif %}</p>
+
+      <div class="location-sheet" id="location-sheet">
+      <div class="location-card" id="location-card">
+        <p class="location-question" id="location-question">L'accident s'est-il produit ici ?</p>
+        <p class="location-place" id="place-label" aria-live="polite"><span class="text-muted">Aucune position choisie pour le moment.</span></p>
+        <div class="coords-box" id="coords-summary">
+          <div class="row g-2">
+            <div class="col-6">
+              <label for="{{ form.latitude.id_for_label }}" class="form-label fw-semibold mb-1">Latitude</label>
+              {{ form.latitude }}
+            </div>
+            <div class="col-6">
+              <label for="{{ form.longitude.id_for_label }}" class="form-label fw-semibold mb-1">Longitude</label>
+              {{ form.longitude }}
+            </div>
+          </div>
+          {% for error in form.latitude.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+          {% for error in form.longitude.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+        </div>
+        <p class="small text-muted mt-2 mb-0 d-none d-md-block">Déplacez le repère ou touchez la carte pour corriger la position.</p>
+
+        <div id="outside-zone-box" class="alert alert-warning mt-3 mb-0" role="alert" {% if not outside_zone %}hidden{% endif %}>
+          <div class="d-flex gap-2">
+            {% icon "triangle-alert" size=20 css="mt-1" %}
+            <div>
+              <strong>Position hors de la zone couverte.</strong>
+              Cette position semble être en dehors de la zone couverte par ACCIMAP.
+              <span id="outside-zone-disclaimer">{{ zone.disclaimer }}</span>
+              Si elle est correcte, vous pouvez la confirmer et poursuivre.
+              <div class="form-check mt-2 outside-confirm">
+                {{ form.confirm_outside_zone }}
+                <label class="form-check-label fw-semibold" for="{{ form.confirm_outside_zone.id_for_label }}">{{ form.confirm_outside_zone.label }}</label>
+              </div>
+              {% for error in form.confirm_outside_zone.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="step-actions">
+        <button type="button" class="btn btn-outline-primary btn-lg" data-prev>{% icon "arrow-left" size=20 css="me-1" %}Retour</button>
+        <button type="button" class="btn btn-outline-primary btn-lg" id="gps-btn">{% icon "locate-fixed" size=20 css="me-1" %}<span class="d-none d-sm-inline">Utiliser ma position actuelle</span><span class="d-sm-none">Ma position</span></button>
+        <button type="button" class="btn btn-accent btn-lg flex-grow-1" id="confirm-position-btn" disabled>{% icon "map-pin" size=20 css="me-1" %}<span id="confirm-position-label">Confirmer cette position</span></button>
+      </div>
+      </div>{# fin du panneau de lieu #}
+    </section>
+
+    {# ================================================ ÉTAPE 3 : DÉTAILS #}
+    <section class="report-step" data-step="3" aria-labelledby="step3-title">
+      <h2 class="step-title" id="step3-title" tabindex="-1">Dites-nous en plus</h2>
+      <p class="step-lead">Quelques informations suffisent. Une estimation est très bien.</p>
+
+      <div class="step-card">
+        <div class="row g-3">
+          <div class="col-7">{% include "includes/form_field.html" with field=form.accident_date %}</div>
+          <div class="col-5">{% include "includes/form_field.html" with field=form.accident_time %}</div>
+        </div>
+        <fieldset class="mb-1">
+          <legend class="form-label fw-semibold fs-6">{{ form.severity.label }}</legend>
+          <div class="row row-cols-2 row-cols-sm-4 g-2">
+            {% for radio in form.severity %}
+            <div class="col">
+              <input type="radio" class="btn-check" name="{{ radio.data.name }}" id="{{ radio.id_for_label }}" value="{{ radio.data.value }}" {% if radio.data.selected %}checked{% endif %} required>
+              <label class="btn btn-outline-primary w-100" for="{{ radio.id_for_label }}">{{ radio.choice_label }}</label>
+            </div>
+            {% endfor %}
+          </div>
+          {% for error in form.severity.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+        </fieldset>
+      </div>
+
+      <div class="step-card">
+        <p class="fw-semibold mb-2">Blessés et décès <span class="text-muted fw-normal small">(approximatif)</span></p>
+        <div class="counters counters-2">
+          {% for field in people_fields %}
+          <div class="counter">
+            <label class="counter-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+            <div class="counter-control">
+              <button type="button" class="counter-btn" data-delta="-1" aria-label="Diminuer : {{ field.label }}">{% icon "minus" size=18 %}</button>
+              {{ field }}
+              <button type="button" class="counter-btn" data-delta="1" aria-label="Augmenter : {{ field.label }}">{% icon "plus" size=18 %}</button>
+            </div>
+            {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="step-card">
+        <div class="counter counter-wide" id="vehicle-counter">
+          <label class="counter-label" for="{{ vehicle_field.id_for_label }}">{{ vehicle_field.label }} <span class="optional-tag">facultatif</span></label>
+          <div class="counter-control">
+            <button type="button" class="counter-btn" data-delta="-1" aria-label="Diminuer : véhicules impliqués">{% icon "minus" size=18 %}</button>
+            {{ vehicle_field }}
+            <button type="button" class="counter-btn" data-delta="1" aria-label="Augmenter : véhicules impliqués">{% icon "plus" size=18 %}</button>
+          </div>
+          <div class="form-text">Laissez vide si vous ne savez pas.</div>
+          {% for error in vehicle_field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+        </div>
+      </div>
+
+      <div class="step-card">
+        {% include "includes/form_field.html" with field=form.description %}
+        <div class="photo-field">
+          <p class="form-label fw-semibold mb-2">{{ form.photo.label }}</p>
+          {% if photo_lost %}<div class="alert alert-info small py-2">Par sécurité, votre navigateur ne conserve pas la photo après une erreur : veuillez la choisir à nouveau.</div>{% endif %}
+          <div class="photo-picker">
+            <input type="file" name="photo" id="id_photo" accept="image/jpeg,image/png,image/webp" class="visually-hidden">
+            <label for="id_photo" class="btn btn-outline-primary photo-btn" id="photo-btn">{% icon "camera" size=20 css="me-2" %}<span>Ajouter une photo</span></label>
+          </div>
+          <div class="form-text">JPEG, PNG ou WebP, {{ max_upload_mb }} Mo maximum. Les informations cachées dans la photo (position GPS, appareil) sont supprimées avant l'enregistrement.</div>
+          <div id="photo-error" class="invalid-feedback d-block" hidden></div>
+          {% for error in form.photo.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+          <div class="photo-preview-wrap" id="photo-preview-wrap" hidden>
+            <img id="photo-preview" class="img-thumbnail" alt="Aperçu de la photo choisie">
+            <button type="button" class="btn btn-outline-secondary" id="photo-remove">{% icon "x" size=16 css="me-1" %}Retirer la photo</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="step-actions">
+        <button type="button" class="btn btn-outline-primary btn-lg" data-prev>{% icon "arrow-left" size=20 css="me-1" %}Retour</button>
+        <button type="button" class="btn btn-primary btn-lg flex-grow-1" id="step3-next" data-next>Continuer {% icon "arrow-right" size=20 css="ms-1" %}</button>
+      </div>
+    </section>
+
+    {# ================================================ ÉTAPE 4 : RÉCAPITULATIF #}
+    <section class="report-step" data-step="4" aria-labelledby="step4-title">
+      <h2 class="step-title" id="step4-title" tabindex="-1">Vérifiez avant d'envoyer</h2>
+      <p class="step-lead">Tout est correct ? Un administrateur vérifiera votre signalement avant qu'il n'apparaisse sur la carte.</p>
+
+      <div class="recap" id="recap">
+        <div class="recap-row">
+          <span class="recap-icon" id="recap-type-icon"></span>
+          <div class="recap-body"><div class="recap-title">Type d'accident</div><div class="recap-value" id="recap-type">—</div></div>
+          <button type="button" class="recap-edit" data-goto="1">Modifier</button>
+        </div>
+        <div class="recap-row">
+          <span class="recap-icon">{% icon "map-pin" size=22 %}</span>
+          <div class="recap-body">
+            <div class="recap-title">Lieu</div>
+            <div class="recap-value" id="recap-place">—</div>
+            <div class="recap-sub" id="recap-coords">—</div>
+          </div>
+          <button type="button" class="recap-edit" data-goto="2">Modifier</button>
+        </div>
+        <div class="recap-row">
+          <span class="recap-icon">{% icon "calendar" size=22 %}</span>
+          <div class="recap-body"><div class="recap-title">Date et heure</div><div class="recap-value" id="recap-datetime">—</div></div>
+          <button type="button" class="recap-edit" data-goto="3">Modifier</button>
+        </div>
+        <div class="recap-row">
+          <span class="recap-icon">{% icon "triangle-alert" size=22 %}</span>
+          <div class="recap-body"><div class="recap-title">Gravité estimée</div><div class="recap-value" id="recap-severity">—</div></div>
+          <button type="button" class="recap-edit" data-goto="3">Modifier</button>
+        </div>
+        <div class="recap-row">
+          <span class="recap-icon">{% icon "users" size=22 %}</span>
+          <div class="recap-body"><div class="recap-title">Personnes et véhicules</div><div class="recap-value" id="recap-counts">—</div></div>
+          <button type="button" class="recap-edit" data-goto="3">Modifier</button>
+        </div>
+        <div class="recap-row" id="recap-description-row" hidden>
+          <span class="recap-icon">{% icon "file-text" size=22 %}</span>
+          <div class="recap-body"><div class="recap-title">Description</div><div class="recap-value recap-text" id="recap-description"></div></div>
+          <button type="button" class="recap-edit" data-goto="3">Modifier</button>
+        </div>
+        <div class="recap-row" id="recap-photo-row" hidden>
+          <span class="recap-icon">{% icon "image" size=22 %}</span>
+          <div class="recap-body"><div class="recap-title">Photo</div><img id="recap-photo" class="recap-photo" alt="Photo jointe au signalement"></div>
+          <button type="button" class="recap-edit" data-goto="3">Modifier</button>
+        </div>
+        <div class="recap-row recap-privacy">
+          <span class="recap-icon">{% if is_anonymous %}{% icon "venetian-mask" size=22 %}{% else %}{% icon "shield-check" size=22 %}{% endif %}</span>
+          <div class="recap-body"><div class="recap-title">Confidentialité</div><div class="recap-value" id="recap-declarant"></div></div>
+        </div>
+      </div>
+
+      <div class="step-actions">
+        <button type="button" class="btn btn-outline-primary btn-lg" data-prev>{% icon "arrow-left" size=20 css="me-1" %}Retour</button>
+        <button type="submit" class="btn btn-accent btn-lg flex-grow-1" id="submit-report" data-loading-text="Envoi en cours…">Envoyer le signalement</button>
+      </div>
+    </section>
+  </form>
+
+</div></div></div>
+</div>
+{{ map_config|json_script:"map-config" }}
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'vendor/leaflet/leaflet.js' %}"></script>
+<script src="{% static 'js/report_wizard.js' %}" defer></script>
+{% endblock %}

@@ -1,0 +1,19 @@
+{# Variables : stats #}
+<h2 class="h6 text-uppercase text-muted mb-2">Signalements reçus</h2>
+<div class="row row-cols-2 row-cols-md-3 row-cols-xl-6 g-2 mb-3">
+  <div class="col"><div class="kpi"><div class="kpi-value" id="kpi-total">{{ stats.counts.total }}</div><div class="kpi-label">Total</div></div></div>
+  <div class="col"><div class="kpi"><div class="kpi-value" id="kpi-anonymous">{{ stats.counts.anonymous }}</div><div class="kpi-label">Anonymes</div></div></div>
+  <div class="col"><div class="kpi"><div class="kpi-value" id="kpi-identified">{{ stats.counts.identified }}</div><div class="kpi-label">Identifiés</div></div></div>
+  <div class="col"><div class="kpi kpi-pending"><div class="kpi-value" id="kpi-pending">{{ stats.counts.pending }}</div><div class="kpi-label">En attente</div></div></div>
+  <div class="col"><div class="kpi kpi-verified"><div class="kpi-value" id="kpi-verified">{{ stats.counts.verified }}</div><div class="kpi-label">Vérifiés</div></div></div>
+  <div class="col"><div class="kpi kpi-rejected"><div class="kpi-value" id="kpi-rejected">{{ stats.counts.rejected }}</div><div class="kpi-label">Rejetés</div></div></div>
+</div>
+
+<h2 class="h6 text-uppercase text-muted mb-2">Accidents retenus{% if not stats.include_rejected %} <span class="text-lowercase fw-normal">(hors signalements rejetés)</span>{% endif %}</h2>
+<div class="row row-cols-2 row-cols-md-3 row-cols-xl-5 g-2 mb-3">
+  <div class="col"><div class="kpi"><div class="kpi-value" id="kpi-accidents">{{ stats.accidents }}</div><div class="kpi-label">Accidents</div></div></div>
+  <div class="col"><div class="kpi"><div class="kpi-value" id="kpi-vehicles">{{ stats.vehicles }}</div><div class="kpi-label">Véhicules impliqués <span class="kpi-note">({{ stats.vehicle_reports }} signalement{{ stats.vehicle_reports|pluralize }} renseigné{{ stats.vehicle_reports|pluralize }})</span></div></div></div>
+  <div class="col"><div class="kpi"><div class="kpi-value" id="kpi-injured">{{ stats.injured }}</div><div class="kpi-label">Blessés</div></div></div>
+  <div class="col"><div class="kpi"><div class="kpi-value" id="kpi-deaths">{{ stats.deaths }}</div><div class="kpi-label">Décès</div></div></div>
+  <div class="col"><div class="kpi"><div class="kpi-value" id="kpi-outside">{{ stats.outside_zone }}</div><div class="kpi-label">Hors zone de couverture</div></div></div>
+</div>

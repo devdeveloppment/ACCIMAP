@@ -1,0 +1,41 @@
+{% extends "dashboard/base_dashboard.html" %}
+{% load static %}
+{% block dash_title %}Statistiques{% endblock %}
+{% block dash_content %}
+<div class="d-flex flex-wrap justify-content-between align-items-end gap-2 mb-3">
+  <div>
+    <h1 class="h3 mb-1">Statistiques</h1>
+    <p class="text-muted small mb-0">Calculées à partir des signalements correspondant aux filtres choisis.</p>
+  </div>
+  <a class="btn btn-outline-primary" id="export-link" href="{% url 'exports:index' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}">{% icon "download" size=18 css="me-1" %}Exporter ces résultats</a>
+</div>
+
+{% include "dashboard/_filter_errors.html" %}
+<div class="card map-toolbar mb-3"><div class="card-body py-2">
+  <div class="d-lg-none">
+    <button class="btn btn-outline-primary w-100" type="button" data-bs-toggle="collapse" data-bs-target="#filters-panel" aria-expanded="false" aria-controls="filters-panel">Filtres{% if filters_active %} (actifs){% endif %}</button>
+  </div>
+  <div class="collapse d-lg-block mt-2 mt-lg-0" id="filters-panel">
+    <form method="get" class="row g-2 align-items-end" id="stats-filters">
+      {% include "dashboard/_filter_fields.html" with show_search=False %}
+      <div class="col-12 col-lg-auto d-flex gap-2">
+        <button type="submit" class="btn btn-primary">Appliquer</button>
+        <a href="{% url 'dashboard:statistics' %}" class="btn btn-outline-secondary">Réinitialiser</a>
+      </div>
+    </form>
+  </div>
+</div></div>
+
+{% include "dashboard/_stats_cards.html" %}
+{% include "dashboard/_charts.html" with full=True %}
+<p class="small text-muted mt-3 mb-0">
+  {% if stats.include_rejected %}Les graphiques incluent les signalements rejetés, car le filtre « Rejeté » est actif.{% else %}Les graphiques et les totaux de blessés et de décès excluent les signalements rejetés.{% endif %}
+  La mention « hors zone » s'appuie sur : {{ zone.label }}.{% if zone.disclaimer %} {{ zone.disclaimer }}{% endif %}
+</p>
+
+{{ chart_data|json_script:"chart-data" }}
+{% endblock %}
+{% block dash_js %}
+<script src="{% static 'vendor/chartjs/chart.umd.js' %}"></script>
+<script src="{% static 'js/dashboard_charts.js' %}" defer></script>
+{% endblock %}

@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}À propos{% endblock %}
+{% block content %}
+<div class="container py-4 py-md-5">
+  <div class="row justify-content-center"><div class="col-lg-8">
+    <h1 class="h2 mb-3">À propos d'ACCIMAP</h1>
+    <p class="lead text-muted">Plateforme web participative de collecte et de cartographie des accidents de la circulation.</p>
+
+    <h2 class="h5 mt-4">Contexte et objectif</h2>
+    <p>ACCIMAP permet aux citoyens de signaler des accidents de la circulation, avec ou sans identification. Les signalements sont géolocalisés et centralisés afin de les visualiser sur une carte, de les filtrer et d'analyser leur répartition.</p>
+
+    <h2 class="h5 mt-4">Zone du prototype</h2>
+    <p>Ce prototype couvre le District Autonome du Grand Lomé.</p>
+
+    <h2 class="h5 mt-4">Traitement des signalements</h2>
+    <p>Chaque signalement est d'abord <strong>en attente</strong>. Un administrateur le consulte puis le marque comme <strong>vérifié</strong> ou <strong>rejeté</strong>. Seuls les signalements vérifiés apparaissent sur la <a href="{% url 'maps:public_map' %}">carte publique</a> ; les signalements en attente ou rejetés n'y figurent jamais.</p>
+
+    <h2 class="h5 mt-4">Confidentialité</h2>
+    <p>L'identité du déclarant et son numéro de téléphone ne sont jamais affichés publiquement. Les signalements anonymes ne sont reliés à aucun compte, et les photos sont nettoyées de leurs métadonnées avant d'être enregistrées.</p>
+
+    <h2 class="h5 mt-4">À lire avec prudence</h2>
+    <p class="mb-0">Les données sont collaboratives et ne remplacent pas les statistiques officielles. Une zone à forte concentration de signalements est une zone <em>potentiellement accidentogène</em> d'après les données collectées, et non un « point noir » officiel.</p>
+  </div></div>
+</div>
+{% endblock %}

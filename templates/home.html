@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block title %}Accueil{% endblock %}
+{% block content %}
+{# ------------------------------------------------ Bandeau principal : l'action est immédiate #}
+<section class="hero text-white">
+  <div class="container py-4 py-md-5">
+    <div class="row">
+      <div class="col-lg-8">
+        <span class="badge rounded-pill hero-badge mb-3">Prototype · Grand Lomé</span>
+        <p class="hero-brand mb-1">ACCIMAP</p>
+        <h1 class="hero-title">Un accident ? Signalez-le en moins d'une minute.</h1>
+        <p class="lead mb-4 text-white-75">Plateforme web participative de collecte et de cartographie des accidents de la circulation, avec ou sans identification.</p>
+
+        <div class="d-grid gap-3 hero-actions">
+          <a href="{% url 'reports:create' %}" class="btn btn-accent btn-cta" id="cta-report">
+            {% icon "siren" size=28 css="me-3" %}
+            <span class="btn-cta-text"><span class="btn-cta-title">Signaler un accident</span><span class="btn-cta-sub">4 étapes simples, depuis votre téléphone</span></span>
+          </a>
+          <a href="{% url 'reports:anonymous_create' %}" class="btn btn-outline-light btn-lg btn-cta-secondary" id="cta-anonymous">
+            {% icon "venetian-mask" size=22 css="me-2" %}Signaler anonymement
+          </a>
+        </div>
+        <div class="d-flex flex-column flex-sm-row flex-wrap column-gap-3 mt-2">
+          {% if user.is_authenticated %}
+            <span class="d-inline-flex align-items-center text-white-75 min-h-44">{% icon "user-round" size=18 css="me-2" %}Vous êtes connecté.</span>
+          {% else %}
+            <a class="btn btn-link link-light px-0" href="{% url 'accounts:login' %}">{% icon "log-in" size=18 css="me-2" %}Se connecter avec mon téléphone</a>
+          {% endif %}
+          <a class="btn btn-link link-light px-0" href="{% url 'maps:public_map' %}">{% icon "map" size=18 css="me-2" %}Voir la carte des signalements</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+{# ------------------------------------------------ Comment signaler : les 4 étapes réelles #}
+<section class="container py-5">
+  <h2 class="h3 mb-1">Comment signaler ?</h2>
+  <p class="text-muted mb-4">Quatre étapes, sans formulaire compliqué.</p>
+  <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-4 g-3">
+    <div class="col"><div class="card step-card h-100"><div class="card-body">
+      <div class="step-card-icon">{% icon "signpost" size=26 %}<span class="step-number step-number-sm">1</span></div>
+      <h3 class="h6 mt-3">Choisissez le type</h3>
+      <p class="small text-muted mb-0">Collision, renversement, sortie de voie… Touchez la carte qui correspond.</p>
+    </div></div></div>
+    <div class="col"><div class="card step-card h-100"><div class="card-body">
+      <div class="step-card-icon">{% icon "map-pin" size=26 %}<span class="step-number step-number-sm">2</span></div>
+      <h3 class="h6 mt-3">Indiquez le lieu</h3>
+      <p class="small text-muted mb-0">Votre position est trouvée automatiquement. Vous pouvez la corriger sur la carte.</p>
+    </div></div></div>
+    <div class="col"><div class="card step-card h-100"><div class="card-body">
+      <div class="step-card-icon">{% icon "camera" size=26 %}<span class="step-number step-number-sm">3</span></div>
+      <h3 class="h6 mt-3">Ajoutez des détails</h3>
+      <p class="small text-muted mb-0">Gravité, blessés, description et photo facultative. Une estimation suffit.</p>
+    </div></div></div>
+    <div class="col"><div class="card step-card h-100"><div class="card-body">
+      <div class="step-card-icon">{% icon "circle-check" size=26 %}<span class="step-number step-number-sm">4</span></div>
+      <h3 class="h6 mt-3">Vérifiez et envoyez</h3>
+      <p class="small text-muted mb-0">Un récapitulatif vous permet de relire avant l'envoi. Un administrateur vérifie ensuite.</p>
+    </div></div></div>
+  </div>
+</section>
+
+{# ------------------------------------------------ Présentation #}
+<section class="container pb-5">
+  <div class="row g-4 align-items-start">
+    <div class="col-lg-7">
+      <h2 class="h3">Qu'est-ce qu'ACCIMAP ?</h2>
+      <p class="text-muted">Dans le Grand Lomé, les accidents de la circulation sont difficiles à recenser et à localiser précisément. ACCIMAP propose aux citoyens un moyen simple de les signaler depuis un téléphone, puis rassemble ces signalements dans une base géographique unique.</p>
+      <p class="text-muted mb-0">Une fois vérifiés par un administrateur, les signalements apparaissent sur une carte publique et alimentent des statistiques. L'objectif est de rendre visibles les secteurs où les accidents se concentrent, afin de nourrir la réflexion sur la sécurité routière.</p>
+    </div>
+    <div class="col-lg-5">
+      <ul class="list-unstyled mb-0 presentation-points">
+        <li><strong>Signaler</strong> en moins d'une minute, avec ou sans compte.</li>
+        <li><strong>Localiser</strong> précisément avec le GPS du téléphone ou en touchant la carte.</li>
+        <li><strong>Visualiser</strong> les accidents vérifiés sur une carte, avec filtres et heatmap.</li>
+        <li><strong>Analyser</strong> les concentrations de signalements et les statistiques.</li>
+      </ul>
+    </div>
+  </div>
+
+  {% if verified_count %}
+  <div class="stat-strip mt-4" id="home-stats">
+    <span class="stat-number">{{ verified_count }}</span>
+    <span>signalement{{ verified_count|pluralize }} vérifié{{ verified_count|pluralize }} affiché{{ verified_count|pluralize }} sur la carte publique</span>
+    <a class="ms-sm-auto btn btn-sm btn-outline-primary" href="{% url 'maps:public_map' %}">Ouvrir la carte</a>
+  </div>
+  {% endif %}
+</section>
+
+{# ------------------------------------------------ Carte + confidentialité #}
+<section class="container pb-4">
+  <div class="row g-4">
+    <div class="col-md-6">
+      <div class="card h-100 info-card"><div class="card-body">
+        <div class="info-icon">{% icon "map" size=24 %}</div>
+        <h2 class="h4 mt-3">Ce que montre la carte</h2>
+        <p class="text-muted">Seuls les signalements <strong>vérifiés</strong> sont publics, avec leur type, leur gravité, leur date et le nombre de blessés et de décès. La heatmap met en évidence les <strong>zones à forte concentration de signalements</strong>.</p>
+        <p class="small text-muted">Ces données sont collaboratives : elles ne remplacent pas les statistiques officielles et ne prouvent pas, à elles seules, qu'une zone est accidentogène.</p>
+        <a href="{% url 'maps:public_map' %}" class="btn btn-primary">Ouvrir la carte</a>
+      </div></div>
+    </div>
+    <div class="col-md-6">
+      <div class="card h-100 info-card"><div class="card-body">
+        <div class="info-icon">{% icon "shield-check" size=24 %}</div>
+        <h2 class="h4 mt-3">Vos données sont protégées</h2>
+        <p class="text-muted">Votre numéro de téléphone sert uniquement à vous connecter : il n'apparaît jamais sur la carte ni dans les informations publiques.</p>
+        <p class="text-muted mb-0">Vous pouvez aussi signaler sans compte : un signalement anonyme n'est rattaché à aucun utilisateur. Les photos sont débarrassées de leurs métadonnées (position GPS, appareil) avant d'être enregistrées.</p>
+      </div></div>
+    </div>
+  </div>
+</section>
+{% endblock %}
