@@ -134,7 +134,9 @@ class StatisticsPagesTests(PersonasTestCase):
 
     def test_file_de_traitement_les_plus_anciens_d_abord(self):
         pending = list(self.client.get(reverse("dashboard:index")).context["pending_reports"])
-        self.assertEqual([r.pk for r in pending], [self.p.pk, self.p_old.pk] if self.p.created_at < self.p_old.created_at else [self.p_old.pk, self.p.pk])
+        # Même ordre que la vue : date de création, puis pk (deux créations peuvent avoir le même horodatage sous Windows).
+        expected = sorted([self.p, self.p_old], key=lambda r: (r.created_at, r.pk))
+        self.assertEqual([r.pk for r in pending], [r.pk for r in expected])
         self.assertContains(self.client.get(reverse("dashboard:index")), "Examiner")
 
     def test_etat_vide(self):

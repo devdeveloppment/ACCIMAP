@@ -264,7 +264,8 @@
   function ensureMap() {
     if (map || !hasMap) { return; }
     map = L.map("location-map", { center: cfg.center, zoom: cfg.zoom });
-    L.tileLayer(cfg.tiles.url, { maxZoom: 19, attribution: cfg.tiles.attribution })
+    // OSM exige un en-tête Referer (sinon tuiles « 403 Access blocked ») : on envoie seulement l'origine du site.
+    L.tileLayer(cfg.tiles.url, { maxZoom: 19, attribution: cfg.tiles.attribution, referrerPolicy: "strict-origin-when-cross-origin" })
       .on("tileerror", function () { if (!tileWarned) { tileWarned = true; showStatus("warning", MSG.tiles); } })
       .addTo(map);
     // Zone de couverture : tracé pointillé, légendé comme indicatif tant qu'elle n'est pas officielle.

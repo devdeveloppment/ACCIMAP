@@ -7,7 +7,7 @@
   <meta name="description" content="ACCIMAP : plateforme web participative de collecte et de cartographie des accidents de la circulation dans le Grand Lomé.">
   <meta name="theme-color" content="#0f2f4f">
   <script>document.documentElement.classList.add('js');</script>
-  <link rel="icon" href="{% static 'img/favicon.svg' %}" type="image/svg+xml">
+  {% include "includes/favicons.html" %}
   <link rel="stylesheet" href="{% static 'vendor/bootstrap/bootstrap.min.css' %}">
   <link rel="stylesheet" href="{% static 'css/accimap.css' %}">
   {% block extra_head %}{% endblock %}

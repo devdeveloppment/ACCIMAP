@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 {% block title %}Accueil{% endblock %}
 {% block content %}
 {# ------------------------------------------------ Bandeau principal : l'action est immédiate #}
@@ -28,6 +29,15 @@
           {% endif %}
           <a class="btn btn-link link-light px-0" href="{% url 'maps:public_map' %}">{% icon "map" size=18 css="me-2" %}Voir la carte des signalements</a>
         </div>
+      </div>
+      {# Illustration sur ordinateur uniquement : sur téléphone, le bouton « Signaler » reste visible sans défiler. #}
+      <div class="col-lg-4 d-none d-lg-flex align-items-center justify-content-center">
+        <picture class="d-block w-100">
+          <source srcset="{% static 'img/hero-accident.webp' %}" type="image/webp">
+          <img class="hero-illustration" src="{% static 'img/hero-accident.jpg' %}" width="800" height="600"
+               alt="Illustration : collision entre deux véhicules à une intersection, localisée par un repère sur la carte"
+               decoding="async" fetchpriority="low">
+        </picture>
       </div>
     </div>
   </div>

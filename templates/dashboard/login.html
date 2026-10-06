@@ -5,13 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
   <title>Connexion | ACCIMAP Administration</title>
-  <link rel="icon" href="{% static 'img/favicon.svg' %}" type="image/svg+xml">
+  {% include "includes/favicons.html" %}
   <link rel="stylesheet" href="{% static 'vendor/bootstrap/bootstrap.min.css' %}">
   <link rel="stylesheet" href="{% static 'css/accimap.css' %}">
 </head>
 <body class="admin-auth-body">
   <main class="admin-auth" id="main">
-    <div class="admin-auth-brand">{% include "includes/logo.html" %}<span>ACCIMAP</span><span class="admin-badge">Administration</span></div>
+    <div class="admin-auth-brand">{% include "includes/logo.html" with size=52 %}<span>ACCIMAP</span><span class="admin-badge">Administration</span></div>
     <div class="card admin-auth-card"><div class="card-body p-4">
       <h1 class="h4 mb-1">Espace d'administration</h1>
       <p class="text-muted small mb-3">Accès privé réservé aux administrateurs d'ACCIMAP.</p>

@@ -27,7 +27,8 @@
   /* ---------- Carte, fond OpenStreetMap ---------- */
   var tileWarned = false;
   var map = L.map("public-map", { center: cfg.center, zoom: cfg.zoom });
-  L.tileLayer(cfg.tiles.url, { maxZoom: 19, attribution: cfg.tiles.attribution })
+  // OSM exige un en-tête Referer (sinon tuiles « 403 Access blocked ») : on envoie seulement l'origine du site.
+  L.tileLayer(cfg.tiles.url, { maxZoom: 19, attribution: cfg.tiles.attribution, referrerPolicy: "strict-origin-when-cross-origin" })
     .on("tileerror", function () {
       if (!tileWarned) {
         tileWarned = true;

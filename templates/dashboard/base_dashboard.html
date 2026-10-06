@@ -7,7 +7,7 @@
   <title>{% block dash_title %}Tableau de bord{% endblock %} | ACCIMAP Administration</title>
   <meta name="theme-color" content="#0a2237">
   <script>document.documentElement.classList.add('js');</script>
-  <link rel="icon" href="{% static 'img/favicon.svg' %}" type="image/svg+xml">
+  {% include "includes/favicons.html" %}
   <link rel="stylesheet" href="{% static 'vendor/bootstrap/bootstrap.min.css' %}">
   <link rel="stylesheet" href="{% static 'css/accimap.css' %}">
   {% block dash_head %}{% endblock %}
@@ -17,7 +17,7 @@
   {# En-tête PRIVÉ : aucun élément de l'interface citoyenne #}
   <header class="admin-header" id="admin-header">
     <div class="container-xl d-flex flex-wrap align-items-center gap-2 py-2">
-      <a class="admin-brand" href="{% url 'dashboard:index' %}">{% include "includes/logo.html" %}<span>ACCIMAP</span><span class="admin-badge">Administration</span></a>
+      <a class="admin-brand" href="{% url 'dashboard:index' %}">{% include "includes/logo.html" with size=30 %}<span>ACCIMAP</span><span class="admin-badge">Administration</span></a>
       <div class="ms-auto d-flex flex-wrap align-items-center gap-2">
         <span class="admin-user">{% icon "shield-check" size=16 css="me-1" %}{{ user.phone_number|mask_phone }} · {% if user.is_superuser %}Superutilisateur{% else %}Staff{% endif %}</span>
         <a class="btn btn-sm btn-outline-light" href="{% url 'dashboard:password_change' %}">{% icon "lock" size=16 css="me-1" %}Mot de passe</a>

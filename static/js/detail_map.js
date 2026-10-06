@@ -7,7 +7,8 @@
   var cfg = JSON.parse(configNode.textContent);
 
   var map = L.map(container, { center: cfg.position, zoom: 16 });
-  L.tileLayer(cfg.tiles.url, { maxZoom: 19, attribution: cfg.tiles.attribution }).addTo(map);
+  // OSM exige un en-tête Referer (sinon tuiles « 403 Access blocked ») : on envoie seulement l'origine du site.
+  L.tileLayer(cfg.tiles.url, { maxZoom: 19, attribution: cfg.tiles.attribution, referrerPolicy: "strict-origin-when-cross-origin" }).addTo(map);
   L.marker(cfg.position, {
     keyboard: false,
     icon: new L.Icon({

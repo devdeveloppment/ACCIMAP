@@ -79,7 +79,7 @@ def index(request):
     stats = compute_stats(AccidentReport.objects.all())
     pending = annotate_in_zone(
         AccidentReport.objects.filter(status=ReportStatus.PENDING)
-    ).order_by("created_at")[:5]   # les plus anciens d'abord : file de traitement
+    ).order_by("created_at", "pk")[:5]   # les plus anciens d'abord : file de traitement (pk départage les égalités)
     return render(
         request,
         "dashboard/index.html",

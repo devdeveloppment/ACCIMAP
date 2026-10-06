@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 600" preserveAspectRatio="xMidYMid slice">
+  <!-- Illustration ACCIMAP : plan de ville stylisé (rues, côte, itinéraire, repères d'accident).
+       Fond transparent : posé en CSS sur le dégradé bleu du site. Détails concentrés à droite (texte à gauche). -->
+  <defs>
+    <linearGradient id="fade" x1="0" x2="1" y1="0" y2="0">
+      <stop offset="0" stop-color="#fff" stop-opacity=".25"/>
+      <stop offset=".45" stop-color="#fff" stop-opacity=".75"/>
+      <stop offset="1" stop-color="#fff" stop-opacity="1"/>
+    </linearGradient>
+    <mask id="m"><rect width="1600" height="600" fill="url(#fade)"/></mask>
+    <radialGradient id="glow" cx=".5" cy=".5" r=".5">
+      <stop offset="0" stop-color="#ff5a4e" stop-opacity=".45"/>
+      <stop offset="1" stop-color="#ff5a4e" stop-opacity="0"/>
+    </radialGradient>
+    <symbol id="pin" viewBox="0 0 32 44">
+      <path d="M16 0C7.2 0 0 7 0 15.6 0 27.3 16 44 16 44s16-16.7 16-28.4C32 7 24.8 0 16 0z" fill="#e5392f"/>
+      <circle cx="16" cy="15.5" r="6.2" fill="#fff"/>
+    </symbol>
+  </defs>
+
+  <g mask="url(#m)" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Océan (golfe de Guinée) et rivage -->
+    <path d="M0 520 C 240 505 420 540 640 522 S 1060 498 1280 515 S 1520 530 1600 520 V600 H0 Z" fill="#fff" fill-opacity=".05" stroke="none"/>
+    <path d="M0 520 C 240 505 420 540 640 522 S 1060 498 1280 515 S 1520 530 1600 520" stroke="#fff" stroke-opacity=".22" stroke-width="2"/>
+    <path d="M0 548 C 260 535 440 562 660 548 S 1080 528 1300 541 S 1530 552 1600 546" stroke="#fff" stroke-opacity=".08" stroke-width="1.5" stroke-dasharray="10 14"/>
+
+    <!-- Îlots / quartiers (trame fine) -->
+    <g stroke="#fff" stroke-opacity=".07" stroke-width="1.5">
+      <path d="M880 60 L1000 52 L1012 150 L892 160 Z"/><path d="M1030 48 L1160 40 L1170 132 L1040 142 Z"/>
+      <path d="M1190 36 L1330 30 L1338 118 L1198 126 Z"/><path d="M1360 26 L1500 22 L1506 110 L1366 116 Z"/>
+      <path d="M900 190 L1020 182 L1030 286 L910 294 Z"/><path d="M1050 176 L1180 170 L1188 270 L1060 278 Z"/>
+      <path d="M1210 162 L1345 156 L1352 254 L1218 262 Z"/><path d="M1375 150 L1520 146 L1526 240 L1382 246 Z"/>
+      <path d="M930 330 L1045 324 L1052 420 L938 428 Z"/><path d="M1075 318 L1200 312 L1206 408 L1082 414 Z"/>
+      <path d="M1232 304 L1360 298 L1366 392 L1238 398 Z"/><path d="M1392 292 L1540 288 L1544 380 L1398 386 Z"/>
+      <path d="M560 120 L680 112 L690 210 L570 218 Z"/><path d="M600 250 L720 244 L728 340 L608 346 Z"/>
+    </g>
+
+    <!-- Rues secondaires -->
+    <g stroke="#fff" stroke-opacity=".12" stroke-width="3">
+      <path d="M860 0 C 875 160 890 330 915 510"/>
+      <path d="M1025 0 C 1035 170 1045 330 1060 505"/>
+      <path d="M1185 0 C 1195 160 1205 320 1220 508"/>
+      <path d="M1350 0 C 1360 150 1370 300 1385 512"/>
+      <path d="M1515 0 C 1522 150 1530 300 1540 516"/>
+      <path d="M700 168 C 900 170 1200 150 1600 128"/>
+      <path d="M760 305 C 1000 300 1280 284 1600 268"/>
+      <path d="M800 440 C 1050 436 1300 424 1600 412"/>
+      <path d="M520 60 C 640 70 760 60 860 52"/>
+    </g>
+
+    <!-- Grands axes (boulevards) -->
+    <g stroke="#fff" stroke-opacity=".2" stroke-width="9">
+      <path d="M560 600 C 760 480 1000 420 1290 360 S 1480 300 1600 270"/>
+      <path d="M1080 0 C 1110 140 1170 260 1290 360 S 1420 500 1480 600"/>
+    </g>
+    <g stroke="#fff" stroke-opacity=".35" stroke-width="1.5" stroke-dasharray="14 12">
+      <path d="M560 600 C 760 480 1000 420 1290 360 S 1480 300 1600 270"/>
+      <path d="M1080 0 C 1110 140 1170 260 1290 360 S 1420 500 1480 600"/>
+    </g>
+
+    <!-- Itinéraire signalé -->
+    <path d="M1470 60 C 1460 140 1400 180 1360 215 S 1300 300 1290 360" stroke="#f08a3c" stroke-opacity=".85" stroke-width="3.5" stroke-dasharray="2 10"/>
+
+    <!-- Intersections -->
+    <g fill="#fff" fill-opacity=".45" stroke="none">
+      <circle cx="1060" cy="305" r="4"/><circle cx="1220" cy="290" r="4"/><circle cx="1205" cy="160" r="4"/>
+      <circle cx="1370" cy="276" r="4"/><circle cx="915" cy="438" r="4"/><circle cx="1385" cy="138" r="4"/>
+    </g>
+  </g>
+
+  <!-- Repères d'accident (hors masque : toujours bien visibles) -->
+  <circle cx="1290" cy="360" r="70" fill="url(#glow)"/>
+  <g fill="none" stroke="#ff6a5e">
+    <circle cx="1290" cy="360" r="22" stroke-opacity=".55" stroke-width="2"/>
+    <circle cx="1290" cy="360" r="40" stroke-opacity=".3" stroke-width="2"/>
+    <circle cx="1290" cy="360" r="58" stroke-opacity=".14" stroke-width="2"/>
+  </g>
+  <use href="#pin" x="1270" y="298" width="40" height="55"/>
+  <circle cx="1470" cy="60" r="30" fill="url(#glow)"/>
+  <use href="#pin" x="1456" y="20" width="28" height="38"/>
+  <circle cx="1050" cy="95" r="26" fill="url(#glow)" opacity=".7"/>
+  <use href="#pin" x="1038" y="61" width="24" height="33" opacity=".85"/>
+  <use href="#pin" x="1528" y="384" width="20" height="28" opacity=".6"/>
+</svg>

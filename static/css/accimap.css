@@ -49,13 +49,35 @@
 /* --- Navigation / pied de page --------------------------------------- */
 .accimap-navbar { background: var(--accimap-navy); border-bottom: 3px solid var(--accimap-accent); }
 .accimap-navbar .nav-link.active { color: #fff; font-weight: 600; }
+/* Logo ACCIMAP (PNG rond, fond transparent autour de l'anneau) */
+.accimap-logo { flex-shrink: 0; border-radius: 50%; }
+/* Illustration du bloc d'accueil (ordinateur) : occupe la colonne de droite, coins arrondis comme les cartes du site */
+.hero-illustration { display: block; width: 100%; max-width: 420px; margin-inline: auto; height: auto; border-radius: 1rem;
+  border: 1px solid rgba(255, 255, 255, .18); box-shadow: 0 14px 34px rgba(0, 0, 0, .35); }
 .accimap-footer { background: var(--accimap-navy); color: rgba(255, 255, 255, .8); }
 .accimap-footer a { color: #fff; text-decoration: none; }
 .accimap-footer a:hover { text-decoration: underline; }
 .accimap-footer li { padding: .15rem 0; }
 
 /* --- Accueil ---------------------------------------------------------- */
-.hero { background: linear-gradient(135deg, var(--accimap-navy) 0%, var(--accimap-blue) 100%); }
+/* Bandeaux d'en-tête (Accueil, Carte, À propos) : plan de ville stylisé (SVG) sur le dégradé bleu ACCIMAP.
+   Sur téléphone, un voile bleu supplémentaire garantit la lisibilité du texte posé sur l'illustration. */
+.hero, .page-banner {
+  background:
+    linear-gradient(rgba(15, 47, 79, .45), rgba(15, 47, 79, .45)),
+    url("../img/bg-city-map.svg") right center / cover no-repeat,
+    linear-gradient(135deg, var(--accimap-navy) 0%, var(--accimap-blue) 100%);
+}
+@media (min-width: 992px) {
+  .hero, .page-banner {
+    background:
+      url("../img/bg-city-map.svg") right center / cover no-repeat,
+      linear-gradient(135deg, var(--accimap-navy) 0%, var(--accimap-blue) 100%);
+  }
+}
+.page-banner { color: #fff; }
+.page-banner .lead, .page-banner .banner-sub { color: rgba(255, 255, 255, .82); }
+.page-banner a:not(.btn) { color: #fff; }
 .hero h1 { font-size: clamp(2.25rem, 8vw, 3.25rem); letter-spacing: .02em; }
 .hero-badge { background: rgba(255, 255, 255, .15); font-weight: 500; }
 .text-white-75 { color: rgba(255, 255, 255, .85); }
@@ -112,7 +134,7 @@
 
 /* --- Carte publique ---------------------------------------------------- */
 #public-map { height: 60vh; min-height: 380px; border-radius: .6rem; border: 1px solid #ced4da; z-index: 0; }
-@media (min-width: 992px) { #public-map { height: calc(100vh - 345px); min-height: 460px; } }
+@media (min-width: 992px) { #public-map { height: calc(100vh - 377px); min-height: 460px; } }   /* 377 = en-tête + bandeau + filtres */
 .map-loading {
   position: absolute; inset: 0; z-index: 500; display: flex; align-items: center; justify-content: center;
   background: rgba(255, 255, 255, .55); border-radius: .6rem;
@@ -383,3 +405,25 @@
 
 /* Onglets de l'espace privé : défilement horizontal sur téléphone, retour à la ligne sur grand écran */
 @media (min-width: 992px) { .dash-nav .nav { flex-wrap: wrap !important; row-gap: .25rem; } }
+
+/* ======================================================================
+   Page « À propos »
+   ====================================================================== */
+.about-title { font-size: clamp(1.9rem, 5.5vw, 2.6rem); font-weight: 800; line-height: 1.15; }
+.about-lead { max-width: 640px; }
+.about-band { background: #eef3f8; }
+.about-zone { border-left: 4px solid var(--accimap-accent); }
+.about-zone .icon { color: var(--accimap-accent); }
+.status-flow { position: relative; display: grid; gap: 1.25rem; }
+.status-flow li { position: relative; display: flex; gap: 1rem; align-items: flex-start; }
+.status-flow li:not(:last-child)::before { content: ""; position: absolute; left: 17px; top: 38px; bottom: -1.25rem; width: 2px; background: #cfdbe7; }
+.status-flow-dot { flex-shrink: 0; width: 36px; height: 36px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
+  background: var(--accimap-navy); color: #fff; font-weight: 700; position: relative; z-index: 1; }
+.about-checks li { display: flex; gap: .75rem; align-items: flex-start; padding: .6rem 0; border-bottom: 1px solid #dbe4ee; }
+.about-checks li:last-child { border-bottom: 0; }
+.about-checks .icon { flex-shrink: 0; margin-top: .15rem; color: var(--accimap-blue); }
+.about-caution .icon { flex-shrink: 0; }
+.about-cta h2 { color: #fff; }
+/* Bandeau d'appel à l'action : dégradé seul (pas d'illustration derrière les boutons) */
+.about-cta.page-banner { background: linear-gradient(135deg, var(--accimap-navy) 0%, var(--accimap-blue) 100%); }
+.about-cta .btn { white-space: nowrap; }

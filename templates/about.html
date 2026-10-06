@@ -1,25 +1,123 @@
 {% extends "base.html" %}
 {% block title %}À propos{% endblock %}
 {% block content %}
-<div class="container py-4 py-md-5">
-  <div class="row justify-content-center"><div class="col-lg-8">
-    <h1 class="h2 mb-3">À propos d'ACCIMAP</h1>
-    <p class="lead text-muted">Plateforme web participative de collecte et de cartographie des accidents de la circulation.</p>
+{# ------------------------------------------------ Bandeau #}
+<section class="page-banner">
+  <div class="container py-4 py-md-5">
+    <div class="d-flex align-items-center gap-3 mb-3">
+      {% include "includes/logo.html" with size=56 %}
+      <span class="badge rounded-pill hero-badge">Prototype académique · Grand Lomé</span>
+    </div>
+    <h1 class="about-title mb-2">À propos d'ACCIMAP</h1>
+    <p class="lead mb-0 about-lead">Plateforme web participative de collecte et de cartographie des accidents de la circulation.</p>
+  </div>
+</section>
 
-    <h2 class="h5 mt-4">Contexte et objectif</h2>
-    <p>ACCIMAP permet aux citoyens de signaler des accidents de la circulation, avec ou sans identification. Les signalements sont géolocalisés et centralisés afin de les visualiser sur une carte, de les filtrer et d'analyser leur répartition.</p>
+{# ------------------------------------------------ Objectif #}
+<section class="container py-5">
+  <div class="row g-4 align-items-center">
+    <div class="col-lg-7">
+      <h2 class="h3 mb-3">Notre objectif</h2>
+      <p class="text-muted">ACCIMAP permet aux citoyens de signaler des accidents de la circulation, avec ou sans identification. Les signalements sont géolocalisés et centralisés afin de les visualiser sur une carte, de les filtrer et d'analyser leur répartition.</p>
+      <p class="text-muted mb-0">L'enjeu est de rendre visibles les secteurs où les accidents se concentrent, pour nourrir la réflexion sur la sécurité routière dans le District Autonome du Grand Lomé.</p>
+    </div>
+    <div class="col-lg-5">
+      <div class="card info-card about-zone"><div class="card-body">
+        <div class="d-flex align-items-center gap-2 mb-2">{% icon "map-pin" size=22 %}<h3 class="h6 mb-0">Zone couverte par le prototype</h3></div>
+        <p class="mb-2"><strong>District Autonome du Grand Lomé</strong></p>
+        <p class="small text-muted mb-0">Une position située hors de la zone couverte n'est jamais refusée : l'utilisateur est simplement averti et confirme sa position.</p>
+      </div></div>
+    </div>
+  </div>
+</section>
 
-    <h2 class="h5 mt-4">Zone du prototype</h2>
-    <p>Ce prototype couvre le District Autonome du Grand Lomé.</p>
+{# ------------------------------------------------ Fonctionnalités #}
+<section class="about-band py-5">
+  <div class="container">
+    <h2 class="h3 mb-1">Ce que permet ACCIMAP</h2>
+    <p class="text-muted mb-4">Du terrain à la carte, en quatre temps.</p>
+    <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-4 g-3">
+      <div class="col"><div class="card step-card h-100"><div class="card-body">
+        <div class="step-card-icon">{% icon "siren" size=26 %}</div>
+        <h3 class="h6 mt-3">Signaler</h3>
+        <p class="small text-muted mb-0">Depuis un téléphone, en quelques étapes : avec un compte (numéro de téléphone et code de vérification) ou de façon anonyme.</p>
+      </div></div></div>
+      <div class="col"><div class="card step-card h-100"><div class="card-body">
+        <div class="step-card-icon">{% icon "locate-fixed" size=26 %}</div>
+        <h3 class="h6 mt-3">Localiser</h3>
+        <p class="small text-muted mb-0">Position GPS automatique ou choisie en touchant la carte. L'emplacement est confirmé avant l'envoi.</p>
+      </div></div></div>
+      <div class="col"><div class="card step-card h-100"><div class="card-body">
+        <div class="step-card-icon">{% icon "shield-check" size=26 %}</div>
+        <h3 class="h6 mt-3">Vérifier</h3>
+        <p class="small text-muted mb-0">Chaque signalement est examiné par un administrateur avant toute publication.</p>
+      </div></div></div>
+      <div class="col"><div class="card step-card h-100"><div class="card-body">
+        <div class="step-card-icon">{% icon "map" size=26 %}</div>
+        <h3 class="h6 mt-3">Visualiser</h3>
+        <p class="small text-muted mb-0">Carte publique des signalements vérifiés, avec filtres, regroupements et carte de chaleur.</p>
+      </div></div></div>
+    </div>
+  </div>
+</section>
 
-    <h2 class="h5 mt-4">Traitement des signalements</h2>
-    <p>Chaque signalement est d'abord <strong>en attente</strong>. Un administrateur le consulte puis le marque comme <strong>vérifié</strong> ou <strong>rejeté</strong>. Seuls les signalements vérifiés apparaissent sur la <a href="{% url 'maps:public_map' %}">carte publique</a> ; les signalements en attente ou rejetés n'y figurent jamais.</p>
+{# ------------------------------------------------ Traitement #}
+<section class="container py-5">
+  <h2 class="h3 mb-1">Le parcours d'un signalement</h2>
+  <p class="text-muted mb-4">Rien n'est publié sans vérification.</p>
+  <ol class="status-flow list-unstyled mb-0">
+    <li>
+      <span class="status-flow-dot">1</span>
+      <div><h3 class="h6 mb-1">Envoi <span class="badge text-bg-warning ms-1">En attente</span></h3>
+        <p class="small text-muted mb-0">Le signalement est enregistré avec sa position. Il n'est pas encore visible du public.</p></div>
+    </li>
+    <li>
+      <span class="status-flow-dot">2</span>
+      <div><h3 class="h6 mb-1">Examen par un administrateur</h3>
+        <p class="small text-muted mb-0">Un administrateur consulte le signalement depuis l'espace d'administration privé.</p></div>
+    </li>
+    <li>
+      <span class="status-flow-dot">3</span>
+      <div><h3 class="h6 mb-1">Décision <span class="badge text-bg-success ms-1">Vérifié</span> <span class="badge text-bg-secondary">Rejeté</span></h3>
+        <p class="small text-muted mb-0">Seuls les signalements <strong>vérifiés</strong> apparaissent sur la <a href="{% url 'maps:public_map' %}">carte publique</a> ; les signalements en attente ou rejetés n'y figurent jamais.</p></div>
+    </li>
+  </ol>
+</section>
 
-    <h2 class="h5 mt-4">Confidentialité</h2>
-    <p>L'identité du déclarant et son numéro de téléphone ne sont jamais affichés publiquement. Les signalements anonymes ne sont reliés à aucun compte, et les photos sont nettoyées de leurs métadonnées avant d'être enregistrées.</p>
+{# ------------------------------------------------ Confidentialité et prudence #}
+<section class="about-band py-5">
+  <div class="container">
+    <div class="row g-4">
+      <div class="col-lg-7">
+        <h2 class="h3 mb-3">Confidentialité</h2>
+        <ul class="list-unstyled about-checks mb-0">
+          <li>{% icon "lock" size=20 %}<span>L'identité du déclarant et son numéro de téléphone ne sont <strong>jamais affichés publiquement</strong>.</span></li>
+          <li>{% icon "venetian-mask" size=20 %}<span>Un signalement anonyme n'est relié à <strong>aucun compte</strong>.</span></li>
+          <li>{% icon "camera" size=20 %}<span>Les photos sont nettoyées de leurs métadonnées (position GPS, appareil) avant d'être enregistrées, et ne sont <strong>jamais publiées</strong> sur la carte publique.</span></li>
+          <li>{% icon "eye" size=20 %}<span>La carte publique n'affiche que des informations générales : type d'accident, gravité, date et heure, nombre de blessés et de décès.</span></li>
+        </ul>
+      </div>
+      <div class="col-lg-5">
+        <div class="alert alert-warning about-caution mb-0" role="note">
+          <div class="d-flex align-items-center gap-2 mb-2">{% icon "triangle-alert" size=20 %}<strong>À lire avec prudence</strong></div>
+          <p class="mb-0 small">Les données sont collaboratives et ne remplacent pas les statistiques officielles. Une zone à forte concentration de signalements est une zone <em>potentiellement accidentogène</em> d'après les données collectées, et non un « point noir » officiel.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
 
-    <h2 class="h5 mt-4">À lire avec prudence</h2>
-    <p class="mb-0">Les données sont collaboratives et ne remplacent pas les statistiques officielles. Une zone à forte concentration de signalements est une zone <em>potentiellement accidentogène</em> d'après les données collectées, et non un « point noir » officiel.</p>
-  </div></div>
-</div>
+{# ------------------------------------------------ Appel à l'action #}
+<section class="container py-5">
+  <div class="about-cta page-banner rounded-4 p-4 p-md-5 d-flex flex-column flex-lg-row align-items-lg-center gap-3">
+    <div class="me-lg-auto">
+      <h2 class="h4 mb-1">Témoin d'un accident ?</h2>
+      <p class="mb-0 banner-sub">Votre signalement aide à mieux comprendre la sécurité routière dans le Grand Lomé.</p>
+    </div>
+    <div class="d-flex flex-column flex-sm-row gap-2">
+      <a class="btn btn-accent btn-lg" href="{% url 'reports:create' %}">{% icon "siren" size=20 %}Signaler un accident</a>
+      <a class="btn btn-outline-light btn-lg" href="{% url 'maps:public_map' %}">{% icon "map" size=20 %}Voir la carte</a>
+    </div>
+  </div>
+</section>
 {% endblock %}
