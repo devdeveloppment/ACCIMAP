@@ -137,29 +137,40 @@ class FieldValidationTests(TestCase):
 class PhotoFormTests(TestCase):
     def test_photo_valide_est_nettoyee_avant_stockage(self):
         upload = SimpleUploadedFile("IMG_Jean_Dupont.jpg", make_jpeg_with_exif(), content_type="image/jpeg")
-        form = build(files={"photo": upload})
+        form = build(files={"photos": upload})
         self.assertTrue(form.is_valid(), form.errors)
-        cleaned = form.cleaned_data["photo"]
+        cleaned = form.cleaned_data["photos"][0]
         self.assertEqual(cleaned.name, "photo.jpg")
         self.assertNotIn(b"Exif", cleaned.read())  # nettoyée AVANT tout enregistrement
 
     def test_sans_photo(self):
         form = build()
         self.assertTrue(form.is_valid(), form.errors)
-        self.assertFalse(form.cleaned_data["photo"])
+        self.assertFalse(form.cleaned_data["photos"])
 
     def test_faux_jpg_refuse(self):
         upload = SimpleUploadedFile("photo.jpg", b"<?php system($_GET['c']); ?>", content_type="image/jpeg")
-        self.assertFalse(build(files={"photo": upload}).is_valid())
+        self.assertFalse(build(files={"photos": upload}).is_valid())
 
     def test_extension_interdite_refusee(self):
-        form = build(files={"photo": make_image("anim.gif", "GIF")})
+        form = build(files={"photos": make_image("anim.gif", "GIF")})
         self.assertFalse(form.is_valid())
-        self.assertIn("photo", form.errors)
+        self.assertIn("photos", form.errors)
 
     @override_settings(MAX_UPLOAD_SIZE_MB=1)
     def test_photo_trop_volumineuse_refusee(self):
         big = SimpleUploadedFile("grosse.png", b"0" * (1024 * 1024 + 1), content_type="image/png")
-        form = build(files={"photo": big})
+        form = build(files={"photos": big})
         self.assertFalse(form.is_valid())
-        self.assertIn("photo", form.errors)
+        self.assertIn("photos", form.errors)
+
+    def test_plusieurs_photos_acceptees(self):
+        form = build(files={"photos": [make_image("a.png"), make_image("b.png")]})
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(len(form.cleaned_data["photos"]), 2)
+
+    @override_settings(MAX_PHOTOS_PER_REPORT=2)
+    def test_trop_de_photos_refusees(self):
+        form = build(files={"photos": [make_image("a.png"), make_image("b.png"), make_image("c.png")]})
+        self.assertFalse(form.is_valid())
+        self.assertIn("photos", form.errors)

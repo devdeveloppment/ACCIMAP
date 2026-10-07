@@ -44,7 +44,7 @@ class IdentifiedReportJourneyTests(TestCase):
         self.assertEqual(page.status_code, 200)
         for expected in ["Utiliser ma position actuelle", 'id="location-map"', 'id="id_latitude"',
                          'id="id_longitude"', "Latitude", "Longitude", "Collision",
-                         "Très grave", "Photographie (facultative)", "+228****56"]:
+                         "Très grave", 'name="photos"', "+228****56"]:
             self.assertContains(page, expected)
         self.assertNotContains(page, PHONE)  # numéro jamais affiché en entier
 
@@ -250,7 +250,7 @@ class PhotoJourneyTests(TestCase):
     def test_photo_enregistree_sans_metadonnees(self):
         upload = SimpleUploadedFile("IMG_0042_Jean_Dupont.jpg", make_jpeg_with_exif(), content_type="image/jpeg")
         with tempfile.TemporaryDirectory() as tmp, override_settings(MEDIA_ROOT=tmp):
-            self.client.post(reverse("reports:anonymous_create"), {**valid_report_data(), "photo": upload})
+            self.client.post(reverse("reports:anonymous_create"), {**valid_report_data(), "photos": upload})
             report = AccidentReport.objects.get()
             self.assertTrue(report.photo)
             self.assertRegex(report.photo.name, r"^reports/photos/\d{4}/\d{2}/[0-9a-f]{32}\.jpg$")
@@ -264,10 +264,22 @@ class PhotoJourneyTests(TestCase):
     def test_fichier_dangereux_refuse_et_rien_n_est_cree(self):
         fake = SimpleUploadedFile("photo.jpg", b"<?php system('rm -rf /'); ?>", content_type="image/jpeg")
         with tempfile.TemporaryDirectory() as tmp, override_settings(MEDIA_ROOT=tmp):
-            page = self.client.post(reverse("reports:anonymous_create"), {**valid_report_data(), "photo": fake})
+            page = self.client.post(reverse("reports:anonymous_create"), {**valid_report_data(), "photos": fake})
             self.assertEqual(page.status_code, 200)
             self.assertEqual(AccidentReport.objects.count(), 0)
             self.assertEqual(list(__import__("pathlib").Path(tmp).rglob("*.*")), [])  # rien stocké
+
+    def test_plusieurs_photos_une_couverture_et_des_supplementaires(self):
+        from reports.tests.helpers import make_image
+        with tempfile.TemporaryDirectory() as tmp, override_settings(MEDIA_ROOT=tmp):
+            self.client.post(
+                reverse("reports:anonymous_create"),
+                {**valid_report_data(), "photos": [make_image("a.png"), make_image("b.png"), make_image("c.png")]},
+            )
+            report = AccidentReport.objects.get()
+            self.assertTrue(report.photo)                         # 1re = couverture
+            self.assertEqual(report.extra_photos.count(), 2)      # 2 supplémentaires
+            self.assertEqual(report.photo_count, 3)
 
 
 class CheckPositionEndpointTests(TestCase):

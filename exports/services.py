@@ -20,6 +20,7 @@ from typing import Any, Callable
 from xml.sax.saxutils import escape
 
 from django.conf import settings
+from django.db.models import Count
 from django.utils import timezone
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font, PatternFill
@@ -92,8 +93,9 @@ COLUMNS = [
     Column("injured", "Blessés", 9, "int", lambda r: r.injured_count),
     Column("deaths", "Décès", 8, "int", lambda r: r.death_count),
     Column("description", "Description", 50, "text", lambda r: r.description),
-    Column("photo", "Photo jointe", 12, "text", lambda r: "Oui" if r.photo else "Non"),
+    Column("photos", "Photos (nombre)", 14, "int", lambda r: (1 if r.photo else 0) + r.extra_photos_count),
     Column("created", "Signalé le", 17, "datetime", lambda r: _local(r.created_at)),
+    Column("updated", "Modifié le", 17, "datetime", lambda r: _local(r.updated_at)),
     Column("processed", "Traité le", 17, "datetime", lambda r: _local(r.verified_at)),
     Column("demo", "Donnée de démonstration", 14, "text", lambda r: "Oui" if r.is_demo else "Non"),
 ]
@@ -101,13 +103,19 @@ COLUMNS = [
 EXPORT_FIELDS = [
     "reference", "accident_date", "accident_time", "accident_type", "severity", "status", "is_anonymous",
     "location", "vehicle_count", "injured_count", "death_count", "description", "photo", "created_at",
-    "verified_at", "is_demo",
+    "updated_at", "verified_at", "is_demo",
 ]
 
 
 def export_queryset(queryset):
-    """Signalements à exporter. La relation `user` n'est volontairement jamais chargée."""
-    return annotate_in_zone(queryset).only(*EXPORT_FIELDS).order_by("-accident_date", "-accident_time", "reference")
+    """Signalements à exporter. La relation `user` n'est volontairement jamais chargée.
+    `extra_photos_count` est annoté en SQL pour compter les photos sans requête par ligne (N+1)."""
+    return (
+        annotate_in_zone(queryset)
+        .only(*EXPORT_FIELDS)
+        .annotate(extra_photos_count=Count("extra_photos"))
+        .order_by("-accident_date", "-accident_time", "reference")
+    )
 
 
 def row_values(report):

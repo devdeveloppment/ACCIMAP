@@ -11,6 +11,26 @@
   --bs-body-bg: #f6f8fb;
 }
 
+/* --- Justification des textes de contenu ------------------------------ */
+/* Les paragraphes du contenu sont justifiés, avec césure automatique (lang="fr")
+   pour éviter les grands espaces entre les mots. Les classes utilitaires de Bootstrap
+   (.text-center, .text-end…) restent prioritaires grâce à leur !important, et les
+   boutons, étiquettes, badges et cellules de tableau ne sont pas concernés. */
+main p {
+  text-align: justify;
+  text-justify: inter-word;
+  hyphens: auto;
+  -webkit-hyphens: auto;
+}
+/* On n'hyphène pas les contenus techniques (références, coordonnées, codes). */
+main p.reference-code,
+main p.dev-code,
+main .recap-sub,
+main code, main kbd, main samp {
+  hyphens: manual;
+  -webkit-hyphens: manual;
+}
+
 /* --- Boutons ---------------------------------------------------------- */
 .btn-primary {
   --bs-btn-bg: var(--accimap-navy);
@@ -81,6 +101,38 @@
 .hero h1 { font-size: clamp(2.25rem, 8vw, 3.25rem); letter-spacing: .02em; }
 .hero-badge { background: rgba(255, 255, 255, .15); font-weight: 500; }
 .text-white-75 { color: rgba(255, 255, 255, .85); }
+
+/* --- Arrière-plan vidéo du hero (accueil) ----------------------------------
+   Couche vidéo plein cadre + voile sombre pour la lisibilité du texte.
+   Repli en cascade : 1) la vidéo si elle se charge et s'autoplay ; 2) sinon le
+   poster (image) du <video> ; 3) sinon l'image de fond de base ci-dessous ;
+   4) en dernier recours le dégradé ACCIMAP hérité. Aucun impact sur .page-banner. */
+.hero {
+  position: relative; overflow: hidden; isolation: isolate;
+  background:
+    linear-gradient(rgba(10, 34, 55, .5), rgba(10, 34, 55, .5)),
+    url("../img/hero-video-poster.jpg") center / cover no-repeat,
+    linear-gradient(135deg, var(--accimap-navy) 0%, var(--accimap-blue) 100%);
+}
+.hero-video {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: cover; object-position: center; z-index: 0; pointer-events: none;
+}
+.hero-overlay {
+  position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background:
+    linear-gradient(90deg, rgba(10, 34, 55, .88) 0%, rgba(10, 34, 55, .6) 42%, rgba(10, 34, 55, .25) 100%),
+    linear-gradient(0deg, rgba(10, 34, 55, .55) 0%, rgba(10, 34, 55, 0) 40%);
+}
+.hero > .container,
+.hero > .container-xl { position: relative; z-index: 2; }
+@media (min-width: 992px) {
+  .hero { min-height: 440px; display: flex; flex-direction: column; justify-content: center; }
+}
+/* Accessibilité : pas d'animation si l'utilisateur la refuse (le poster/l'image reste). */
+@media (prefers-reduced-motion: reduce) {
+  .hero-video { display: none; }
+}
 .step-card { border: 0; box-shadow: 0 1px 3px rgba(15, 47, 79, .12); }
 .step-number {
   display: inline-flex; align-items: center; justify-content: center;
@@ -142,16 +194,21 @@
 .map-loading[hidden] { display: none; }
 .map-toolbar { border: 0; box-shadow: 0 1px 3px rgba(15, 47, 79, .12); }
 
-/* Gravité : couleurs des marqueurs, pastilles de légende et badges */
-.sev-low      { --sev: #2e9e5b; }
-.sev-medium   { --sev: #e0a800; }
-.sev-severe   { --sev: #e8590c; }
-.sev-critical { --sev: #b02a37; }
+/* Gravité : couleurs des marqueurs, pastilles de légende et badges.
+   Palette séquentielle contrastée (vert → jaune → orange → rouge) lisible même en vision des couleurs réduite. */
+.sev-low      { --sev: #1a9641; }   /* Faible    */
+.sev-medium   { --sev: #e6b000; }   /* Moyenne   */
+.sev-severe   { --sev: #f06400; }   /* Grave     */
+.sev-critical { --sev: #d7191c; }   /* Très grave */
+/* Marqueur de carte : pastille cerclée de blanc, double ombre pour ressortir sur le fond.
+   La taille est fixée par Leaflet (iconSize) et croît avec la gravité : un accident très grave saute aux yeux. */
 .sev-marker {
-  width: 24px; height: 24px; border-radius: 50%; background: var(--sev);
-  border: 3px solid #fff; box-shadow: 0 1px 5px rgba(0, 0, 0, .55);
+  border-radius: 50%; background: var(--sev);
+  border: 3px solid #fff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, .3), 0 2px 6px rgba(0, 0, 0, .5);
 }
-.sev-dot { display: inline-block; width: 14px; height: 14px; border-radius: 50%; background: var(--sev); border: 2px solid #fff; box-shadow: 0 0 0 1px #6c757d; vertical-align: -2px; margin-right: .35rem; }
+.sev-marker.sev-critical { box-shadow: 0 0 0 1px rgba(0, 0, 0, .3), 0 0 0 4px rgba(215, 25, 28, .25), 0 2px 6px rgba(0, 0, 0, .5); }
+.sev-dot { display: inline-block; width: 15px; height: 15px; border-radius: 50%; background: var(--sev); border: 2px solid #fff; box-shadow: 0 0 0 1px #6c757d; vertical-align: -3px; margin-right: .4rem; }
 .sev-badge { background: var(--sev); color: #fff; }
 .sev-badge.sev-medium { color: #212529; }
 .legend-item { display: inline-block; margin-right: .9rem; }
@@ -180,15 +237,28 @@
 
 /* --- Tableau de bord administrateur ------------------------------------ */
 .dash-nav { overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: .25rem; }
-.dash-nav .nav-link { white-space: nowrap; color: var(--accimap-navy); }
-.dash-nav .nav-link.active { background: var(--accimap-navy); color: #fff; }
-.kpi { background: #fff; border-radius: .6rem; padding: .7rem .9rem; box-shadow: 0 1px 3px rgba(15, 47, 79, .12); border-left: 4px solid var(--accimap-navy); height: 100%; }
-.kpi-value { font-size: 1.7rem; font-weight: 700; line-height: 1.1; color: var(--accimap-navy); }
-.kpi-label { font-size: .8rem; color: #6c757d; }
+.dash-nav .nav-link { white-space: nowrap; color: var(--accimap-navy); font-weight: 600; border-radius: .5rem; transition: background-color .15s ease, color .15s ease; }
+.dash-nav .nav-link:hover { background: rgba(15, 47, 79, .08); color: var(--accimap-navy); }
+.dash-nav .nav-link.active { background: var(--accimap-navy); color: #fff; box-shadow: 0 2px 6px rgba(15, 47, 79, .25); }
+.dash-nav .nav-link.active:hover { background: var(--accimap-navy); color: #fff; }
+.kpi { position: relative; overflow: hidden; background: #fff; border-radius: .7rem; padding: .85rem 1rem; box-shadow: 0 1px 3px rgba(15, 47, 79, .1); border: 1px solid rgba(15, 47, 79, .06); border-left: 4px solid var(--accimap-navy); height: 100%; transition: transform .15s ease, box-shadow .15s ease; }
+.kpi:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(15, 47, 79, .16); }
+.kpi-value { font-size: 1.8rem; font-weight: 800; line-height: 1.1; color: var(--accimap-navy); letter-spacing: -.01em; }
+.kpi-label { font-size: .78rem; color: #6c757d; font-weight: 500; }
+.kpi-note { font-weight: 400; }
 .kpi-pending { border-left-color: #f0ad4e; }
+.kpi-pending .kpi-value { color: #b9770f; }
 .kpi-verified { border-left-color: #2e9e5b; }
+.kpi-verified .kpi-value { color: #238049; }
 .kpi-rejected { border-left-color: #6c757d; }
-.chart-card, .detail-card { border: 0; box-shadow: 0 1px 3px rgba(15, 47, 79, .12); }
+.kpi-rejected .kpi-value { color: #6c757d; }
+.chart-card, .detail-card { border: 0; border-radius: .7rem; box-shadow: 0 1px 3px rgba(15, 47, 79, .1); transition: box-shadow .15s ease; }
+.chart-card:hover, .detail-card:hover { box-shadow: 0 6px 18px rgba(15, 47, 79, .14); }
+.admin-body .card { border: 1px solid rgba(15, 47, 79, .06); border-radius: .7rem; box-shadow: 0 1px 3px rgba(15, 47, 79, .1); }
+.admin-body h2.text-uppercase { letter-spacing: .05em; font-size: .72rem; font-weight: 700; }
+#pending-queue { border-left: 4px solid #f0ad4e; }
+.admin-body .table thead th { font-size: .78rem; text-transform: uppercase; letter-spacing: .03em; color: #6c757d; border-bottom-width: 2px; }
+.admin-body .table-hover tbody tr:hover { background: rgba(15, 47, 79, .035); }
 .chart-box { position: relative; height: 260px; }
 .chart-box-tall { height: 320px; }
 .chart-empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; margin: 0; }
@@ -196,6 +266,11 @@
 .detail-list dd { margin-bottom: .45rem; overflow-wrap: anywhere; }
 #detail-map { height: 260px; border-radius: .6rem; border: 1px solid #ced4da; z-index: 0; }
 .detail-photo { max-height: 420px; }
+/* Galerie de la fiche administrateur : miniatures carrées, responsive, cliquables */
+.photo-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: .5rem; }
+.photo-gallery-item { display: block; aspect-ratio: 1; border-radius: .5rem; overflow: hidden; border: 1px solid #d9e2ec; background: #fff; }
+.photo-gallery-item img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .15s ease; }
+.photo-gallery-item:hover img { transform: scale(1.05); }
 /* Statuts (carte administrateur, légende) */
 .st-pending   { --sev: #f0ad4e; }
 .st-verified  { --sev: #2e9e5b; }
@@ -251,8 +326,35 @@
 .step-title { font-size: 1.35rem; font-weight: 700; color: var(--accimap-navy); margin-bottom: .25rem; }
 .step-title:focus { outline: none; }
 .step-lead { color: #5b6b7b; margin-bottom: 1rem; }
-.step-card { background: #fff; border-radius: .8rem; padding: 1rem; margin-bottom: .9rem; box-shadow: 0 1px 3px rgba(15, 47, 79, .12); }
+.step-card { background: #fff; border-radius: .8rem; padding: 1.1rem 1.15rem; margin-bottom: .9rem; box-shadow: 0 1px 3px rgba(15, 47, 79, .12); }
+/* Le wizard occupe une largeur confortable, centrée, sans s'étirer à l'excès sur très grand écran. */
+.wizard-col { max-width: 1080px; }
+/* Étape « Détails » : grille 2 colonnes aérée sur desktop, 1 colonne sur mobile. */
+.step-grid { display: grid; gap: 1rem; }
+.step-grid .step-card { margin-bottom: 0; }
+@media (min-width: 992px) {
+  .step-grid { grid-template-columns: 1fr 1fr; align-items: stretch; }   /* cartes du haut de hauteur égale */
+  .step-grid > .step-card:last-child { grid-column: 1 / -1; }            /* description + photos : pleine largeur */
+}
 .step-actions { display: flex; flex-wrap: wrap; gap: .6rem; margin-top: 1.25rem; }
+
+/* Choix de la gravité : chaque bouton porte la couleur de son niveau (même palette que les marqueurs) */
+.sev-pick {
+  --sev-c: var(--accimap-navy);
+  display: flex; align-items: center; justify-content: center; gap: .35rem;
+  border: 2px solid var(--sev-c); color: var(--sev-c); background: #fff;
+  font-weight: 600; min-height: 46px; padding: .4rem .3rem; font-size: .92rem; line-height: 1.15;
+  white-space: nowrap; transition: background-color .15s ease, color .15s ease, box-shadow .15s ease;
+}
+.sev-pick::before { content: ""; width: .6rem; height: .6rem; border-radius: 50%; background: var(--sev-c); flex: 0 0 auto; }
+.sev-pick:hover { background: color-mix(in srgb, var(--sev-c) 10%, #fff); color: var(--sev-c); }
+.sev-pick-low      { --sev-c: #1a9641; }
+.sev-pick-medium   { --sev-c: #b9820a; }
+.sev-pick-severe   { --sev-c: #f06400; }
+.sev-pick-critical { --sev-c: #d7191c; }
+.btn-check:checked + .sev-pick { background: var(--sev-c); color: #fff; box-shadow: 0 3px 10px -3px var(--sev-c); }
+.btn-check:checked + .sev-pick::before { background: #fff; }
+.btn-check:focus-visible + .sev-pick { outline: 3px solid #f5a623; outline-offset: 2px; }
 
 /* Étape 1 : cartes de types */
 .type-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: .7rem; }
@@ -292,18 +394,35 @@
 .outside-confirm .form-check-input:checked { background-color: var(--accimap-navy); border-color: var(--accimap-navy); }
 
 /* Étape 3 : compteurs et photo */
-.counters { display: grid; grid-template-columns: repeat(3, 1fr); gap: .6rem; }
+.counters { display: grid; grid-template-columns: repeat(3, 1fr); gap: .75rem; align-items: stretch; }
+/* Chaque compteur est une colonne : le contrôle est poussé en bas, donc les trois
+   contrôles restent alignés même si une étiquette (ex. « Véhicules » + « facultatif »)
+   occupe deux lignes. Valable sur tous les écrans. */
+.counter { display: flex; flex-direction: column; }
 .counter-label { display: block; font-weight: 600; font-size: .9rem; margin-bottom: .3rem; text-align: center; }
-.counter-control { display: flex; align-items: stretch; border: 1px solid #ced4da; border-radius: .6rem; overflow: hidden; background: #fff; }
+.counter-control { display: flex; align-items: stretch; margin-top: auto; border: 1px solid #ced4da; border-radius: .6rem; overflow: hidden; background: #fff; }
 .counter-control input.form-control { border: 0; border-radius: 0; text-align: center; font-weight: 700; font-size: 1.1rem; padding: .4rem 0; min-width: 0; -moz-appearance: textfield; box-shadow: none; }
 .counter-control input::-webkit-outer-spin-button, .counter-control input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 .counter-btn { flex: 0 0 40px; min-height: 46px; border: 0; background: #eef3f8; color: var(--accimap-navy); display: inline-flex; align-items: center; justify-content: center; }
 .counter-btn:hover, .counter-btn:active { background: #dbe6f2; }
-.photo-btn { width: 100%; border-style: dashed; border-width: 2px; padding: .8rem; }
-.photo-picker input:focus-visible + .photo-btn { outline: 3px solid #f5a623; outline-offset: 2px; }
-.photo-preview-wrap { margin-top: .75rem; display: flex; align-items: flex-end; gap: .75rem; flex-wrap: wrap; }
-.photo-preview-wrap[hidden] { display: none; }
-#photo-preview { max-height: 150px; }
+/* Zone d'upload multi-images (glisser-déposer + clic) */
+.dropzone { position: relative; border: 2px dashed #b4c4d6; border-radius: .7rem; background: #f7fafd; transition: border-color .15s ease, background-color .15s ease; }
+.dropzone.is-dragover { border-color: var(--accimap-accent); background: #fff4ec; }
+.dropzone.is-full { opacity: .6; }
+.dropzone.is-full .dropzone-label { pointer-events: none; }
+.dropzone-label { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .15rem; text-align: center; padding: 1rem; cursor: pointer; color: var(--accimap-navy); min-height: 96px; margin: 0; }
+.dropzone-icon { color: var(--accimap-blue); margin-bottom: .1rem; }
+.dropzone-title { font-weight: 700; }
+.dropzone-hint { font-size: .82rem; color: #6c7a89; }
+.dropzone input:focus-visible + .dropzone-label { outline: 3px solid #f5a623; outline-offset: 2px; border-radius: .6rem; }
+.photo-count { font-size: .8rem; font-weight: 600; color: var(--accimap-blue); background: #e8f0f8; padding: .1rem .55rem; border-radius: 1rem; }
+.photo-count[hidden] { display: none; }
+.photo-grid { margin-top: .75rem; display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: .5rem; }
+.photo-grid[hidden] { display: none; }
+.photo-thumb { position: relative; aspect-ratio: 1; border-radius: .55rem; overflow: hidden; border: 1px solid #d9e2ec; background: #fff; }
+.photo-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.photo-thumb-remove { position: absolute; top: 3px; right: 3px; width: 26px; height: 26px; border: 0; border-radius: 50%; background: rgba(17, 40, 58, .78); color: #fff; font-size: 1.1rem; line-height: 1; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.photo-thumb-remove:hover { background: #b02a37; }
 
 /* Étape 4 : récapitulatif */
 .recap { background: #fff; border-radius: .9rem; box-shadow: 0 1px 3px rgba(15, 47, 79, .12); overflow: hidden; }
@@ -316,7 +435,8 @@
 .recap-value { font-weight: 600; color: #17283a; overflow-wrap: anywhere; }
 .recap-sub { font-size: .85rem; color: #6c7a89; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
 .recap-text { font-weight: 400; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-.recap-photo { max-height: 90px; border-radius: .4rem; border: 1px solid #d9e2ec; margin-top: .25rem; }
+.recap-photos { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .35rem; }
+.recap-photo { height: 64px; width: 64px; object-fit: cover; border-radius: .4rem; border: 1px solid #d9e2ec; }
 .recap-edit { flex: 0 0 auto; background: none; border: 0; color: var(--accimap-blue); font-weight: 600; font-size: .9rem; min-height: 44px; padding: 0 .4rem; }
 .recap-edit:hover { text-decoration: underline; }
 .recap-privacy { background: #f6faf7; }
@@ -390,7 +510,7 @@
    Espace d'administration PRIVÉ (gabarit distinct de l'interface citoyenne)
    ====================================================================== */
 .admin-body { background: #eef2f6; }
-.admin-header { background: #0a2237; color: #fff; border-bottom: 3px solid var(--accimap-accent); }
+.admin-header { background: linear-gradient(100deg, #0a2237 0%, #123a5e 100%); color: #fff; border-bottom: 3px solid var(--accimap-accent); box-shadow: 0 2px 12px rgba(10, 34, 55, .18); position: sticky; top: 0; z-index: 1020; }
 .admin-brand { display: inline-flex; align-items: center; gap: .5rem; color: #fff; text-decoration: none; font-weight: 800; font-size: 1.15rem; }
 .admin-brand:hover { color: #fff; }
 .admin-badge { font-size: .7rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; background: var(--accimap-accent); color: #fff; padding: .2rem .55rem; border-radius: .35rem; }

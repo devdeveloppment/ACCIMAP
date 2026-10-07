@@ -15,8 +15,32 @@ from django.utils.html import format_html
 from accounts.phone import mask_phone
 from dashboard.audit import CHANGE, log_action, log_export
 from reports.choices import ReportStatus
-from reports.models import AccidentReport
+from reports.models import AccidentReport, ReportPhoto
 from reports.zone import annotate_in_zone, get_coverage_zone
+
+
+class ReportPhotoInline(admin.TabularInline):
+    """Photos supplémentaires du signalement (la couverture reste sur le champ photo)."""
+
+    model = ReportPhoto
+    extra = 0
+    can_delete = True
+    fields = ("thumbnail", "created_at")
+    readonly_fields = ("thumbnail", "created_at")
+
+    def has_add_permission(self, request, obj=None):
+        return False  # l'ajout se fait par le formulaire citoyen, pas ici
+
+    @admin.display(description="Aperçu")
+    def thumbnail(self, obj):
+        if not obj.image:
+            return "—"
+        url = reverse("dashboard:report_extra_photo", args=[obj.report_id, obj.pk])
+        return format_html(
+            '<a href="{}" target="_blank" rel="noopener">Ouvrir (espace protégé)</a><br>'
+            '<img src="{}" alt="Photo supplémentaire" style="max-width:220px;max-height:160px;margin-top:6px">',
+            url, url,
+        )
 
 
 class ZoneFilter(admin.SimpleListFilter):
@@ -50,6 +74,7 @@ class AccidentReportAdmin(GISModelAdmin):
     ordering = ("-created_at",)
     list_per_page = 25
     actions = ["mark_verified", "mark_rejected", "mark_pending", "export_selected_csv"]
+    inlines = [ReportPhotoInline]
 
     fieldsets = (
         ("Identification", {"fields": ("reference", "status", "mode_display", "declarant_display", "is_demo")}),

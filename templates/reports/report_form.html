@@ -5,7 +5,7 @@
 
 {% block content %}
 <div class="report-wizard" id="report-wizard">
-<div class="container py-3 py-md-4"><div class="row justify-content-center"><div class="col-lg-9 col-xl-8">
+<div class="container-xl py-3 py-md-4"><div class="row justify-content-center"><div class="col-12 col-xl-11 col-xxl-10 wizard-col">
 
   {# ------------------------------------------------ En-tête : titre, mode, progression #}
   <header class="wizard-header">
@@ -128,6 +128,7 @@
       <h2 class="step-title" id="step3-title" tabindex="-1">Dites-nous en plus</h2>
       <p class="step-lead">Quelques informations suffisent. Une estimation est très bien.</p>
 
+      <div class="step-grid">
       <div class="step-card">
         <div class="row g-3">
           <div class="col-7">{% include "includes/form_field.html" with field=form.accident_date %}</div>
@@ -139,7 +140,7 @@
             {% for radio in form.severity %}
             <div class="col">
               <input type="radio" class="btn-check" name="{{ radio.data.name }}" id="{{ radio.id_for_label }}" value="{{ radio.data.value }}" {% if radio.data.selected %}checked{% endif %} required>
-              <label class="btn btn-outline-primary w-100" for="{{ radio.id_for_label }}">{{ radio.choice_label }}</label>
+              <label class="btn sev-pick sev-pick-{{ radio.data.value|lower }} w-100" for="{{ radio.id_for_label }}">{{ radio.choice_label }}</label>
             </div>
             {% endfor %}
           </div>
@@ -148,8 +149,8 @@
       </div>
 
       <div class="step-card">
-        <p class="fw-semibold mb-2">Blessés et décès <span class="text-muted fw-normal small">(approximatif)</span></p>
-        <div class="counters counters-2">
+        <p class="fw-semibold mb-2">Personnes et véhicules <span class="text-muted fw-normal small">(approximatif)</span></p>
+        <div class="counters">
           {% for field in people_fields %}
           <div class="counter">
             <label class="counter-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
@@ -161,40 +162,43 @@
             {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
           </div>
           {% endfor %}
-        </div>
-      </div>
-
-      <div class="step-card">
-        <div class="counter counter-wide" id="vehicle-counter">
-          <label class="counter-label" for="{{ vehicle_field.id_for_label }}">{{ vehicle_field.label }} <span class="optional-tag">facultatif</span></label>
-          <div class="counter-control">
-            <button type="button" class="counter-btn" data-delta="-1" aria-label="Diminuer : véhicules impliqués">{% icon "minus" size=18 %}</button>
-            {{ vehicle_field }}
-            <button type="button" class="counter-btn" data-delta="1" aria-label="Augmenter : véhicules impliqués">{% icon "plus" size=18 %}</button>
+          <div class="counter" id="vehicle-counter">
+            <label class="counter-label" for="{{ vehicle_field.id_for_label }}">Véhicules <span class="optional-tag">facultatif</span></label>
+            <div class="counter-control">
+              <button type="button" class="counter-btn" data-delta="-1" aria-label="Diminuer : véhicules impliqués">{% icon "minus" size=18 %}</button>
+              {{ vehicle_field }}
+              <button type="button" class="counter-btn" data-delta="1" aria-label="Augmenter : véhicules impliqués">{% icon "plus" size=18 %}</button>
+            </div>
+            {% for error in vehicle_field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
           </div>
-          <div class="form-text">Laissez vide si vous ne savez pas.</div>
-          {% for error in vehicle_field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
         </div>
+        <div class="form-text mt-2">Une estimation suffit pour les blessés et les décès. Laissez vide si vous ne savez pas le nombre de véhicules.</div>
       </div>
 
       <div class="step-card">
         {% include "includes/form_field.html" with field=form.description %}
         <div class="photo-field">
-          <p class="form-label fw-semibold mb-2">{{ form.photo.label }}</p>
-          {% if photo_lost %}<div class="alert alert-info small py-2">Par sécurité, votre navigateur ne conserve pas la photo après une erreur : veuillez la choisir à nouveau.</div>{% endif %}
-          <div class="photo-picker">
-            <input type="file" name="photo" id="id_photo" accept="image/jpeg,image/png,image/webp" class="visually-hidden">
-            <label for="id_photo" class="btn btn-outline-primary photo-btn" id="photo-btn">{% icon "camera" size=20 css="me-2" %}<span>Ajouter une photo</span></label>
+          <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
+            <p class="form-label fw-semibold mb-0">Photos <span class="optional-tag">facultatif</span></p>
+            <span class="photo-count" id="photo-count" hidden></span>
           </div>
-          <div class="form-text">JPEG, PNG ou WebP, {{ max_upload_mb }} Mo maximum. Les informations cachées dans la photo (position GPS, appareil) sont supprimées avant l'enregistrement.</div>
+          {% if photo_lost %}<div class="alert alert-info small py-2">Par sécurité, votre navigateur ne conserve pas les photos après une erreur : veuillez les choisir à nouveau.</div>{% endif %}
+          <div class="dropzone" id="photo-dropzone">
+            <input type="file" name="photos" id="id_photos" accept="image/jpeg,image/png,image/webp" multiple class="visually-hidden">
+            <label for="id_photos" class="dropzone-label" id="photo-btn">
+              {% icon "camera" size=26 css="dropzone-icon" %}
+              <span class="dropzone-title">Ajouter des photos</span>
+              <span class="dropzone-hint d-none d-sm-inline">Touchez pour choisir, ou glissez-déposez vos images ici</span>
+              <span class="dropzone-hint d-sm-none">Touchez pour choisir vos photos</span>
+            </label>
+          </div>
+          <div class="form-text">JPEG, PNG ou WebP · {{ max_upload_mb }} Mo par image · jusqu'à {{ max_photos }} photos. Les informations cachées (position GPS, appareil) sont supprimées avant l'enregistrement.</div>
           <div id="photo-error" class="invalid-feedback d-block" hidden></div>
-          {% for error in form.photo.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
-          <div class="photo-preview-wrap" id="photo-preview-wrap" hidden>
-            <img id="photo-preview" class="img-thumbnail" alt="Aperçu de la photo choisie">
-            <button type="button" class="btn btn-outline-secondary" id="photo-remove">{% icon "x" size=16 css="me-1" %}Retirer la photo</button>
-          </div>
+          {% for error in form.photos.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+          <div class="photo-grid" id="photo-grid" hidden></div>
         </div>
       </div>
+      </div>{# fin step-grid #}
 
       <div class="step-actions">
         <button type="button" class="btn btn-outline-primary btn-lg" data-prev>{% icon "arrow-left" size=20 css="me-1" %}Retour</button>
@@ -244,7 +248,11 @@
         </div>
         <div class="recap-row" id="recap-photo-row" hidden>
           <span class="recap-icon">{% icon "image" size=22 %}</span>
-          <div class="recap-body"><div class="recap-title">Photo</div><img id="recap-photo" class="recap-photo" alt="Photo jointe au signalement"></div>
+          <div class="recap-body">
+            <div class="recap-title">Photos</div>
+            <div class="recap-value" id="recap-photo-count"></div>
+            <div class="recap-photos" id="recap-photos"></div>
+          </div>
           <button type="button" class="recap-edit" data-goto="3">Modifier</button>
         </div>
         <div class="recap-row recap-privacy">

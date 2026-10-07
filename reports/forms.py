@@ -16,6 +16,33 @@ OUTSIDE_ZONE_MESSAGE = (
 )
 
 
+class MultipleFileInput(forms.ClearableFileInput):
+    """Widget <input type=file multiple> : autorise plusieurs fichiers d'un coup."""
+
+    allow_multiple_selected = True
+
+
+class MultipleFileField(forms.FileField):
+    """
+    Champ fichier acceptant plusieurs photos. `clean` renvoie TOUJOURS une liste de
+    fichiers validés individuellement (vide si rien n'est envoyé).
+    """
+
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault(
+            "widget",
+            MultipleFileInput(attrs={"accept": "image/jpeg,image/png,image/webp", "multiple": True}),
+        )
+        super().__init__(*args, **kwargs)
+
+    def clean(self, data, initial=None):
+        single = super().clean
+        if not data:
+            return []
+        files = data if isinstance(data, (list, tuple)) else [data]
+        return [single(f, initial) for f in files if f]
+
+
 class ReportDetailsForm(forms.ModelForm):
     """
     Détails d'un accident (type, date, gravité, nombres, description), avec leur validation.
@@ -115,14 +142,12 @@ class AccidentReportForm(ReportDetailsForm):
         required=False,
         label="Je confirme que cette position est correcte.",
     )
+    # Photos multiples (hors modèle) : la 1re devient la couverture (report.photo),
+    # les suivantes des ReportPhoto. La vue s'en charge dans form_valid.
+    photos = MultipleFileField(required=False, label="Photos (facultatives)")
 
     class Meta(ReportDetailsForm.Meta):
-        fields = ReportDetailsForm.Meta.fields + ["photo"]
-        labels = {**ReportDetailsForm.Meta.labels, "photo": "Photographie (facultative)"}
-        widgets = {
-            **ReportDetailsForm.Meta.widgets,
-            "photo": forms.FileInput(attrs={"accept": "image/jpeg,image/png,image/webp"}),
-        }
+        fields = ReportDetailsForm.Meta.fields   # le champ photo est géré hors modèle (voir `photos`)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -137,16 +162,24 @@ class AccidentReportForm(ReportDetailsForm):
             )
 
     # ------------------------------------------------------------------
-    def clean_photo(self):
-        photo = self.cleaned_data.get("photo")
-        if not photo:
-            return None
-        # 1) Contrôle du fichier d'origine, 2) ré-encodage sans métadonnées (EXIF...).
-        # Fait ICI, donc avant tout stockage de la photo.
-        validate_photo_extension(photo)
-        validate_photo_size(photo)
-        validate_photo_content(photo)
-        return sanitize_photo(photo)
+    def clean_photos(self):
+        photos = self.cleaned_data.get("photos") or []
+        maximum = settings.MAX_PHOTOS_PER_REPORT
+        if len(photos) > maximum:
+            raise forms.ValidationError(
+                f"Vous pouvez joindre au maximum {maximum} photos (vous en avez sélectionné {len(photos)})."
+            )
+        # Pour chaque image : 1) contrôle du fichier d'origine, 2) ré-encodage sans
+        # métadonnées (EXIF…). Fait ICI, donc avant tout stockage.
+        sanitized = []
+        for photo in photos:
+            if not photo:
+                continue
+            validate_photo_extension(photo)
+            validate_photo_size(photo)
+            validate_photo_content(photo)
+            sanitized.append(sanitize_photo(photo))
+        return sanitized
 
     def clean(self):
         cleaned = super().clean()

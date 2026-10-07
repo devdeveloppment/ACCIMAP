@@ -14,6 +14,7 @@ urlpatterns = [
     path("dashboard/reports/", views.report_list, name="report_list"),
     path("dashboard/reports/<uuid:pk>/", views.report_detail, name="report_detail"),
     path("dashboard/reports/<uuid:pk>/photo/", views.report_photo, name="report_photo"),
+    path("dashboard/reports/<uuid:pk>/photo/<uuid:photo_id>/", views.report_extra_photo, name="report_extra_photo"),
     path("dashboard/reports/<uuid:pk>/review/", views.report_review, name="report_review"),
     path("dashboard/reports/<uuid:pk>/edit/", views.report_edit, name="report_edit"),
     path("dashboard/reports/<uuid:pk>/delete/", views.report_delete, name="report_delete"),

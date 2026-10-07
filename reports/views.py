@@ -12,6 +12,7 @@ from django.views.generic import FormView
 from .choices import ACCIDENT_TYPE_HINTS, ACCIDENT_TYPE_ICONS, AccidentType
 from .forms import AccidentReportForm
 from .geocoding import reverse_geocode
+from .models import ReportPhoto
 from .zone import get_coverage_zone
 
 SUCCESS_SALT = "reports.success"
@@ -53,7 +54,8 @@ class ReportCreateView(FormView):
                 for value, label in AccidentType.choices
             ],
             # Les navigateurs vident un champ fichier à chaque rechargement de page : on le dit à l'utilisateur.
-            photo_lost=self.request.method == "POST" and form.is_bound and bool(form.errors) and "photo" in self.request.FILES,
+            photo_lost=self.request.method == "POST" and form.is_bound and bool(form.errors) and "photos" in self.request.FILES,
+            max_photos=settings.MAX_PHOTOS_PER_REPORT,
             vehicle_field=form["vehicle_count"],
             people_fields=[form[name] for name in ("injured_count", "death_count")],
             is_anonymous=self.anonymous,
@@ -77,6 +79,7 @@ class ReportCreateView(FormView):
                 "checkUrl": reverse("reports:check_position"),
                 "placeUrl": reverse("reports:place"),
                 "maxUploadBytes": settings.MAX_UPLOAD_SIZE_MB * 1024 * 1024,
+                "maxPhotos": settings.MAX_PHOTOS_PER_REPORT,
             },
         )
         return context
@@ -85,7 +88,17 @@ class ReportCreateView(FormView):
         report = form.save(commit=False)
         report.is_anonymous = self.anonymous
         report.user = None if self.anonymous else self.request.user
+
+        # Photos (déjà validées et assainies par le formulaire) : la 1re sert de
+        # couverture (report.photo), les suivantes deviennent des ReportPhoto.
+        photos = form.cleaned_data.get("photos") or []
+        if photos:
+            report.photo = photos[0]
         report.save()
+        if len(photos) > 1:
+            ReportPhoto.objects.bulk_create(
+                [ReportPhoto(report=report, image=image) for image in photos[1:]]
+            )
 
         # Le jeton signé est sans état : rien n'est écrit en session, donc aucun lien
         # n'est conservé entre un compte connecté et un signalement anonyme.

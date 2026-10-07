@@ -13,6 +13,8 @@
   var dateFrom = form.elements.date_from, dateTo = form.elements.date_to;
 
   var SEVERITY_CLASS = { LOW: "sev-low", MEDIUM: "sev-medium", SEVERE: "sev-severe", CRITICAL: "sev-critical" };
+  // Taille du marqueur selon la gravité : plus c'est grave, plus la pastille est grande (lecture immédiate).
+  var SEVERITY_SIZE = { LOW: 22, MEDIUM: 26, SEVERE: 30, CRITICAL: 34 };
   // Mode administrateur : même carte, mais tous les statuts, marqueurs colorés par statut.
   var ADMIN = !!cfg.admin;
   var STATUS_CLASS = { PENDING: "st-pending", VERIFIED: "st-verified", REJECTED: "st-rejected" };
@@ -83,9 +85,12 @@
   /* ---------- Marqueurs et popups (informations publiques uniquement) ---------- */
   function iconFor(p) {
     var cls = ADMIN ? STATUS_CLASS[p.status] : SEVERITY_CLASS[p.severity];
+    // En mode administrateur les marqueurs reflètent le statut (taille uniforme) ; côté public, la taille suit la gravité.
+    var size = ADMIN ? 26 : (SEVERITY_SIZE[p.severity] || 26);
+    var half = size / 2;
     return L.divIcon({
       className: "sev-marker " + (cls || "sev-medium"),
-      iconSize: [24, 24], iconAnchor: [12, 12], popupAnchor: [0, -12]
+      iconSize: [size, size], iconAnchor: [half, half], popupAnchor: [0, -half]
     });
   }
 

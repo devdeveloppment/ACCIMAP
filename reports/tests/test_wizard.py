@@ -77,9 +77,9 @@ class WizardPageTests(TestCase):
 
     def test_etape_details_courte(self):
         page = self.client.get(self.ANONYMOUS)
-        for expected in ["Gravité estimée", "Faible", "Très grave", "Nombre approximatif de véhicules impliqués", "facultatif",
+        for expected in ["Gravité estimée", "Faible", "Très grave", "Véhicules", "facultatif",
                          "Laissez vide si vous ne savez pas", "Blessés", "Décès",
-                         'name="description"', "Photographie (facultative)", 'accept="image/jpeg,image/png,image/webp"',
+                         'name="description"', "Ajouter des photos", 'accept="image/jpeg,image/png,image/webp"',
                          'name="accident_date"', 'name="accident_time"']:
             self.assertContains(page, expected)
         self.assertEqual(len(re.findall(r'class="counter[ "]', page.content.decode())), 3)   # blessés, décès, véhicules
@@ -92,7 +92,7 @@ class WizardPageTests(TestCase):
     def test_etape_recapitulatif(self):
         page = self.client.get(self.ANONYMOUS)
         for expected in ['id="recap"', 'id="recap-type"', 'id="recap-place"', 'id="recap-coords"', 'id="recap-datetime"',
-                         'id="recap-severity"', 'id="recap-counts"', 'id="recap-photo"', 'id="recap-declarant"']:
+                         'id="recap-severity"', 'id="recap-counts"', 'id="recap-photos"', 'id="recap-declarant"']:
             self.assertContains(page, expected)
         self.assertContains(page, 'type="submit" class="btn btn-accent btn-lg flex-grow-1" id="submit-report"')
 
@@ -183,12 +183,12 @@ class WizardSubmissionTests(TestCase):
         self.assertRegex(page.content.decode(), r'id="type-PILEUP" value="PILEUP"[^>]*checked')
 
     def test_photo_perdue_apres_erreur_est_signalee_a_l_utilisateur(self):
-        data = {**valid_report_data(injured_count="-4"), "photo": make_image()}
-        self.assertContains(self.client.post(self.URLS["anonyme"], data), "ne conserve pas la photo")
+        data = {**valid_report_data(injured_count="-4"), "photos": make_image()}
+        self.assertContains(self.client.post(self.URLS["anonyme"], data), "ne conserve pas les photos")
 
     def test_pas_de_message_photo_sans_photo(self):
         page = self.client.post(self.URLS["anonyme"], valid_report_data(injured_count="-4"))
-        self.assertNotContains(page, "ne conserve pas la photo")
+        self.assertNotContains(page, "ne conserve pas les photos")
 
     def test_photo_valide_toujours_nettoyee_dans_le_nouveau_parcours(self):
         import tempfile
@@ -197,7 +197,7 @@ class WizardSubmissionTests(TestCase):
         from django.core.files.uploadedfile import SimpleUploadedFile
         upload = SimpleUploadedFile("IMG_Jean.jpg", make_jpeg_with_exif(), content_type="image/jpeg")
         with tempfile.TemporaryDirectory() as tmp, override_settings(MEDIA_ROOT=tmp):
-            self.client.post(self.URLS["anonyme"], {**valid_report_data(), "photo": upload})
+            self.client.post(self.URLS["anonyme"], {**valid_report_data(), "photos": upload})
             data = Path(AccidentReport.objects.get().photo.path).read_bytes()
             for marker in (b"Exif", b"Apple", b"iPhone", b"GPS"):
                 self.assertNotIn(marker, data)

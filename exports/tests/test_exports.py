@@ -9,6 +9,7 @@ from django.test import override_settings
 from django.urls import reverse
 from django.utils import timezone
 from openpyxl import load_workbook
+from openpyxl.utils import get_column_letter
 from pypdf import PdfReader
 
 from accounts.models import User
@@ -82,7 +83,7 @@ class CsvExportTests(ExportDataMixin, PersonasTestCase):
         self.assertEqual(row["Zone de couverture"], "Dans la zone")
         self.assertEqual((row["Véhicules impliqués (approx.)"], row["Blessés"], row["Décès"]), ("3", "2", "1"))
         self.assertEqual(row["Description"], "Carrefour du marché")
-        self.assertEqual(row["Photo jointe"], "Non")
+        self.assertEqual(row["Photos (nombre)"], "0")
         self.assertRegex(row["Heure"], r"^\d{2}:\d{2}$")
         self.assertRegex(row["Date de l'accident"], r"^\d{4}-\d{2}-\d{2}$")
 
@@ -181,7 +182,8 @@ class XlsxExportTests(ExportDataMixin, PersonasTestCase):
         self.assertEqual([c.value for c in ws[1]], [c.header for c in services.COLUMNS])
         self.assertTrue(all(c.font.bold for c in ws[1]))
         self.assertEqual(ws.freeze_panes, "B2")
-        self.assertEqual(ws.auto_filter.ref, f"A1:R{ws.max_row}")
+        last_col = get_column_letter(len(services.COLUMNS))
+        self.assertEqual(ws.auto_filter.ref, f"A1:{last_col}{ws.max_row}")
         self.assertEqual(ws.max_row, 4)
         self.assertEqual(ws.column_dimensions["N"].width, 50)     # description lisible
 

@@ -21,7 +21,7 @@ from accounts.decorators import staff_permission_required
 from accounts.roles import PERM_CHANGE, PERM_DELETE, PERM_VIEW
 from reports.choices import AccidentType, ReportStatus, Severity
 from reports.filters import ReportFilterForm
-from reports.models import AccidentReport
+from reports.models import AccidentReport, ReportPhoto
 from reports.zone import annotate_in_zone, get_coverage_zone
 
 from .audit import CHANGE, DELETION, log_action
@@ -156,21 +156,33 @@ def _static(path):
     return static(path)
 
 
-@can_view
-def report_photo(request, pk):
-    """Sert la photo UNIQUEMENT aux membres autorisés (jamais d'URL publique /media/)."""
-    report = get_object_or_404(AccidentReport, pk=pk)
-    if not report.photo:
+def _serve_image(image_field):
+    """Sert un fichier image (couverture ou photo supplémentaire) en ligne, sans sniffing."""
+    if not image_field:
         raise Http404("Pas de photo.")
     try:
-        handle = report.photo.open("rb")
+        handle = image_field.open("rb")
     except FileNotFoundError:
         raise Http404("Fichier introuvable.")
-    extension = Path(report.photo.name).suffix.lower()
+    extension = Path(image_field.name).suffix.lower()
     response = FileResponse(handle, content_type=PHOTO_TYPES.get(extension, "application/octet-stream"))
     response["Content-Disposition"] = f'inline; filename="photo{extension}"'
     response["X-Content-Type-Options"] = "nosniff"
     return response
+
+
+@can_view
+def report_photo(request, pk):
+    """Sert la photo de couverture UNIQUEMENT aux membres autorisés (jamais d'URL publique /media/)."""
+    report = get_object_or_404(AccidentReport, pk=pk)
+    return _serve_image(report.photo)
+
+
+@can_view
+def report_extra_photo(request, pk, photo_id):
+    """Sert une photo supplémentaire du signalement (espace protégé uniquement)."""
+    extra = get_object_or_404(ReportPhoto, pk=photo_id, report_id=pk)
+    return _serve_image(extra.image)
 
 
 # ---------------------------------------------------------------------------

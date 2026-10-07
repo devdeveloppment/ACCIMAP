@@ -46,10 +46,22 @@
     </div></div>
 
     <div class="card detail-card mb-3"><div class="card-body">
-      <h2 class="h5">Photographie</h2>
+      <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
+        <h2 class="h5 mb-0">Photographies</h2>
+        {% with total=report.photo_count %}{% if total %}<span class="badge text-bg-light border">{{ total }} photo{{ total|pluralize }}</span>{% endif %}{% endwith %}
+      </div>
       {% if report.photo %}
-        <img id="report-photo" src="{% url 'dashboard:report_photo' report.pk %}" alt="Photo du signalement {{ report.reference }}" class="img-fluid rounded detail-photo">
-        <p class="small text-muted mt-2 mb-0">Visible uniquement dans l'espace administrateur. Les métadonnées (GPS, appareil) ont été supprimées à l'envoi.</p>
+        <div class="photo-gallery" id="report-gallery">
+          <a class="photo-gallery-item" href="{% url 'dashboard:report_photo' report.pk %}" target="_blank" rel="noopener">
+            <img src="{% url 'dashboard:report_photo' report.pk %}" alt="Photo principale du signalement {{ report.reference }}">
+          </a>
+          {% for extra in report.extra_photos.all %}
+          <a class="photo-gallery-item" href="{% url 'dashboard:report_extra_photo' report.pk extra.pk %}" target="_blank" rel="noopener">
+            <img src="{% url 'dashboard:report_extra_photo' report.pk extra.pk %}" alt="Photo supplémentaire du signalement {{ report.reference }}">
+          </a>
+          {% endfor %}
+        </div>
+        <p class="small text-muted mt-2 mb-0">Visibles uniquement dans l'espace administrateur. Les métadonnées (GPS, appareil) ont été supprimées à l'envoi.</p>
       {% else %}
         <p class="text-muted mb-0">Aucune photo jointe.</p>
       {% endif %}

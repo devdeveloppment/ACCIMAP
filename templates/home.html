@@ -4,8 +4,17 @@
 {% block content %}
 {# ------------------------------------------------ Bandeau principal : l'action est immédiate #}
 <section class="hero text-white">
-  <div class="container py-4 py-md-5">
-    <div class="row">
+  {# Arrière-plan vidéo : autoplay/muted/loop/playsinline, object-fit cover (CSS).
+     Repli automatique sur le poster puis l'image de fond si la vidéo est absente. #}
+  <video class="hero-video" autoplay muted loop playsinline preload="metadata"
+         poster="{% static 'img/hero-video-poster.jpg' %}" aria-hidden="true" tabindex="-1"
+         controlslist="nodownload noremoteplayback noplaybackrate" disablepictureinpicture disableremoteplayback>
+    <source src="{% static 'video/hero-accident.webm' %}" type="video/webm">
+    <source src="{% static 'video/hero-accident.mp4' %}" type="video/mp4">
+  </video>
+  <div class="hero-overlay" aria-hidden="true"></div>
+  <div class="container py-3 py-md-4">
+    <div class="row align-items-center">
       <div class="col-lg-8">
         <span class="badge rounded-pill hero-badge mb-3">Prototype · Grand Lomé</span>
         <p class="hero-brand mb-1">ACCIMAP</p>
@@ -21,7 +30,7 @@
             {% icon "venetian-mask" size=22 css="me-2" %}Signaler anonymement
           </a>
         </div>
-        <div class="d-flex flex-column flex-sm-row flex-wrap column-gap-3 mt-2">
+        <div class="d-flex flex-column flex-sm-row align-items-start align-items-sm-center flex-wrap gap-2 gap-sm-3 mt-3">
           {% if user.is_authenticated %}
             <span class="d-inline-flex align-items-center text-white-75 min-h-44">{% icon "user-round" size=18 css="me-2" %}Vous êtes connecté.</span>
           {% else %}
@@ -30,7 +39,7 @@
           <a class="btn btn-link link-light px-0" href="{% url 'maps:public_map' %}">{% icon "map" size=18 css="me-2" %}Voir la carte des signalements</a>
         </div>
       </div>
-      {# Illustration sur ordinateur uniquement : sur téléphone, le bouton « Signaler » reste visible sans défiler. #}
+      {# Carte-illustration sur ordinateur : conserve le style d'origine, posée au-dessus de la vidéo. #}
       <div class="col-lg-4 d-none d-lg-flex align-items-center justify-content-center">
         <picture class="d-block w-100">
           <source srcset="{% static 'img/hero-accident.webp' %}" type="image/webp">
@@ -44,7 +53,7 @@
 </section>
 
 {# ------------------------------------------------ Comment signaler : les 4 étapes réelles #}
-<section class="container py-5">
+<section class="container py-4">
   <h2 class="h3 mb-1">Comment signaler ?</h2>
   <p class="text-muted mb-4">Quatre étapes, sans formulaire compliqué.</p>
   <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-4 g-3">
@@ -72,7 +81,7 @@
 </section>
 
 {# ------------------------------------------------ Présentation #}
-<section class="container pb-5">
+<section class="container pb-4">
   <div class="row g-4 align-items-start">
     <div class="col-lg-7">
       <h2 class="h3">Qu'est-ce qu'ACCIMAP ?</h2>

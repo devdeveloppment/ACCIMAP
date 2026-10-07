@@ -93,7 +93,7 @@ class VehicleFieldJourneyTests(TestCase):
 
     def test_controle_numerique_adapte_au_mobile(self):
         html = self.client.get(ANONYMOUS).content.decode()
-        counter = re.search(r'<div class="counter counter-wide" id="vehicle-counter">.*?</div>\s*<div class="form-text">', html, re.S).group(0)
+        counter = re.search(r'id="vehicle-counter">.*?<div class="form-text mt-2">', html, re.S).group(0)
         self.assertEqual(counter.count('class="counter-btn"'), 2)    # boutons « − » et « + »
         self.assertIn('aria-label="Diminuer', counter)
         self.assertIn('aria-label="Augmenter', counter)

@@ -257,6 +257,8 @@ STORAGES = {
 # Photos de signalement (validées côté serveur, voir reports/validators.py).
 MAX_UPLOAD_SIZE_MB = env_int("MAX_UPLOAD_SIZE_MB", 5)
 ALLOWED_IMAGE_EXTENSIONS = ["jpg", "jpeg", "png", "webp"]
+# Nombre maximal de photos jointes à un même signalement (la 1re est la couverture).
+MAX_PHOTOS_PER_REPORT = env_int("MAX_PHOTOS_PER_REPORT", 5)
 
 
 # ---------------------------------------------------------------------------

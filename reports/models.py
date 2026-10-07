@@ -229,6 +229,24 @@ class AccidentReport(models.Model):
             storage.delete(name)
 
     # ------------------------------------------------------------------
+    # Galerie : photo de couverture (self.photo) + photos supplémentaires
+    # ------------------------------------------------------------------
+    @property
+    def gallery(self):
+        """Toutes les photos du signalement, couverture d'abord puis les supplémentaires."""
+        items = []
+        if self.photo:
+            items.append({"url_name": "dashboard:report_photo", "args": (self.pk,), "cover": True})
+        for extra in self.extra_photos.all():
+            items.append({"url_name": "dashboard:report_extra_photo", "args": (self.pk, extra.pk), "cover": False})
+        return items
+
+    @property
+    def photo_count(self):
+        """Nombre total de photos (couverture comprise), sans charger les fichiers."""
+        return (1 if self.photo else 0) + self.extra_photos.count()
+
+    # ------------------------------------------------------------------
     # Workflow administratif
     # ------------------------------------------------------------------
     def set_status(self, status, admin_user, note=None):
@@ -245,3 +263,33 @@ class AccidentReport(models.Model):
             self.admin_note = note
             fields.append("admin_note")
         self.save(update_fields=fields)
+
+
+class ReportPhoto(models.Model):
+    """
+    Photo supplémentaire rattachée à un signalement (la 1re photo reste sur
+    AccidentReport.photo, qui sert de couverture). Même stockage et mêmes
+    validations que la couverture ; le contenu est assaini (EXIF retiré) à l'envoi.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    report = models.ForeignKey(
+        AccidentReport,
+        verbose_name="signalement",
+        on_delete=models.CASCADE,
+        related_name="extra_photos",
+    )
+    image = models.ImageField(
+        "photographie",
+        upload_to=report_photo_path,
+        validators=[validate_photo_extension, validate_photo_size, validate_photo_content],
+    )
+    created_at = models.DateTimeField("ajoutée le", auto_now_add=True)
+
+    class Meta:
+        verbose_name = "photo de signalement"
+        verbose_name_plural = "photos de signalement"
+        ordering = ["created_at"]
+
+    def __str__(self):
+        return f"Photo de {self.report.reference or 'signalement'}"

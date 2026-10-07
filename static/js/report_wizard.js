@@ -377,40 +377,93 @@
     });
   });
 
-  var photoInput = document.getElementById("id_photo");
-  var photoPreview = document.getElementById("photo-preview");
-  var photoWrap = document.getElementById("photo-preview-wrap");
+  /* ------------------------------------------------------------------ photos multiples */
+  var photoInput = document.getElementById("id_photos");
+  var photoGrid = document.getElementById("photo-grid");
   var photoError = document.getElementById("photo-error");
-  var photoLabel = document.querySelector("#photo-btn span");
-  var photoUrl = null;
+  var photoCount = document.getElementById("photo-count");
+  var dropzone = document.getElementById("photo-dropzone");
+  var maxPhotos = cfg.maxPhotos || 5;
+  // La liste de fichiers d'un <input> n'est pas modifiable directement : on garde notre
+  // propre tableau et on le recopie dans l'input via un DataTransfer (permet la suppression).
+  var photoFiles = [];
+  var photoUrls = [];
 
-  function resetPhoto() {
-    photoInput.value = "";
-    photoWrap.hidden = true;
-    photoPreview.removeAttribute("src");
-    if (photoUrl) { URL.revokeObjectURL(photoUrl); photoUrl = null; }
-    photoLabel.textContent = "Ajouter une photo";
+  function syncInputFiles() {
+    var dt = new DataTransfer();
+    photoFiles.forEach(function (file) { dt.items.add(file); });
+    photoInput.files = dt.files;
   }
-  photoInput.addEventListener("change", function () {
+
+  function clearPhotoUrls() {
+    photoUrls.forEach(function (url) { URL.revokeObjectURL(url); });
+    photoUrls = [];
+  }
+
+  function renderPhotos() {
+    clearPhotoUrls();
+    photoGrid.textContent = "";
+    photoFiles.forEach(function (file, index) {
+      var url = URL.createObjectURL(file);
+      photoUrls.push(url);
+      var cell = document.createElement("div");
+      cell.className = "photo-thumb";
+      var img = document.createElement("img");
+      img.src = url;
+      img.alt = "Aperçu : " + file.name;
+      cell.appendChild(img);
+      var remove = document.createElement("button");
+      remove.type = "button";
+      remove.className = "photo-thumb-remove";
+      remove.setAttribute("aria-label", "Retirer cette photo");
+      remove.textContent = "×";
+      remove.addEventListener("click", function () {
+        photoFiles.splice(index, 1);
+        syncInputFiles();
+        renderPhotos();
+      });
+      cell.appendChild(remove);
+      photoGrid.appendChild(cell);
+    });
+    var n = photoFiles.length;
+    photoGrid.hidden = n === 0;
+    photoCount.hidden = n === 0;
+    photoCount.textContent = n + " photo" + (n > 1 ? "s" : "") + " sur " + maxPhotos;
+    dropzone.classList.toggle("is-full", n >= maxPhotos);
+  }
+
+  function addPhotos(fileList) {
     photoError.hidden = true;
-    var file = photoInput.files && photoInput.files[0];
-    if (!file) { resetPhoto(); return; }
-    var problem = null;
-    if (!/^image\/(jpeg|png|webp)$/.test(file.type)) { problem = MSG.photoType; }
-    else if (file.size > cfg.maxUploadBytes) { problem = MSG.photoSize + " (maximum " + Math.round(cfg.maxUploadBytes / 1048576) + " Mo)."; }
-    if (problem) {
-      resetPhoto();
-      photoError.textContent = problem;
-      photoError.hidden = false;
-      return;
+    var rejected = null;
+    Array.prototype.forEach.call(fileList, function (file) {
+      if (photoFiles.length >= maxPhotos) { rejected = "Vous pouvez joindre au maximum " + maxPhotos + " photos."; return; }
+      if (!/^image\/(jpeg|png|webp)$/.test(file.type)) { rejected = MSG.photoType; return; }
+      if (file.size > cfg.maxUploadBytes) { rejected = MSG.photoSize + " (maximum " + Math.round(cfg.maxUploadBytes / 1048576) + " Mo)."; return; }
+      photoFiles.push(file);
+    });
+    syncInputFiles();
+    renderPhotos();
+    if (rejected) { photoError.textContent = rejected; photoError.hidden = false; }
+  }
+
+  photoInput.addEventListener("change", function () {
+    // Les fichiers choisis s'ajoutent à la sélection existante (sans écraser).
+    if (photoInput.files && photoInput.files.length) {
+      var picked = Array.prototype.slice.call(photoInput.files);
+      addPhotos(picked);   // addPhotos recopie l'ensemble (anciens + nouveaux) dans l'input
     }
-    if (photoUrl) { URL.revokeObjectURL(photoUrl); }
-    photoUrl = URL.createObjectURL(file);
-    photoPreview.src = photoUrl;
-    photoWrap.hidden = false;
-    photoLabel.textContent = "Changer la photo";
   });
-  document.getElementById("photo-remove").addEventListener("click", resetPhoto);
+
+  // Glisser-déposer (desktop) : surbrillance + ajout des fichiers déposés.
+  ["dragenter", "dragover"].forEach(function (evt) {
+    dropzone.addEventListener(evt, function (e) { e.preventDefault(); dropzone.classList.add("is-dragover"); });
+  });
+  ["dragleave", "drop"].forEach(function (evt) {
+    dropzone.addEventListener(evt, function (e) { e.preventDefault(); dropzone.classList.remove("is-dragover"); });
+  });
+  dropzone.addEventListener("drop", function (e) {
+    if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) { addPhotos(e.dataTransfer.files); }
+  });
 
   /* ------------------------------------------------------------------ étape 4 : récapitulatif */
   function buildRecap() {
@@ -428,7 +481,17 @@
 
     var severity = form.querySelector('input[name="severity"]:checked');
     var severityLabel = severity ? form.querySelector('label[for="' + severity.id + '"]') : null;
-    $("#recap-severity").textContent = severityLabel ? severityLabel.textContent.trim() : "—";
+    var recapSeverity = $("#recap-severity");
+    recapSeverity.textContent = "";
+    if (severityLabel) {
+      var SEV_CLASS = { LOW: "sev-low", MEDIUM: "sev-medium", SEVERE: "sev-severe", CRITICAL: "sev-critical" };
+      var dot = document.createElement("span");
+      dot.className = "sev-dot " + (SEV_CLASS[severity.value] || "sev-medium");
+      recapSeverity.appendChild(dot);
+      recapSeverity.appendChild(document.createTextNode(severityLabel.textContent.trim()));
+    } else {
+      recapSeverity.textContent = "—";
+    }
 
     var vehicles = $("#id_vehicle_count").value;
     $("#recap-counts").textContent = "Véhicules : " + (vehicles === "" ? "non renseigné" : vehicles) +
@@ -438,9 +501,19 @@
     $("#recap-description-row").hidden = !description;
     $("#recap-description").textContent = description;
 
-    var hasPhoto = !!(photoInput.files && photoInput.files[0]) && !!photoUrl;
-    $("#recap-photo-row").hidden = !hasPhoto;
-    if (hasPhoto) { $("#recap-photo").src = photoUrl; }
+    var recapPhotos = $("#recap-photos");
+    recapPhotos.textContent = "";
+    $("#recap-photo-row").hidden = photoFiles.length === 0;
+    if (photoFiles.length) {
+      $("#recap-photo-count").textContent = photoFiles.length + " photo" + (photoFiles.length > 1 ? "s" : "") + " jointe" + (photoFiles.length > 1 ? "s" : "");
+      photoFiles.forEach(function (file) {
+        var img = document.createElement("img");
+        img.className = "recap-photo";
+        img.alt = "Photo jointe";
+        img.src = URL.createObjectURL(file);
+        recapPhotos.appendChild(img);
+      });
+    }
     $("#recap-declarant").textContent = form.dataset.declarant;
   }
 
