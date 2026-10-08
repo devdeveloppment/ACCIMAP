@@ -24,7 +24,7 @@ class ReportEditForm(ReportDetailsForm):
     position ne peuvent PAS être modifiés ici (ils ne figurent pas dans le formulaire)."""
 
     remove_photo = forms.BooleanField(
-        required=False, label="Supprimer la photo (par ex. si elle montre des personnes identifiables)"
+        required=False, label="Supprimer les photos (par ex. si elles montrent des personnes identifiables)"
     )
 
     def __init__(self, *args, **kwargs):

@@ -312,19 +312,26 @@ class EditTests(PersonasTestCase):
         self.assertIn("accident_type", entry.change_message)
 
     def test_suppression_de_la_photo(self):
+        from reports.models import ReportPhoto
+
         with tempfile.TemporaryDirectory() as tmp, override_settings(MEDIA_ROOT=tmp):
             report = make_report(photo=make_image())
-            path = Path(report.photo.path)
-            self.assertTrue(path.exists())
+            extra = ReportPhoto.objects.create(report=report, image=make_image("extra.png"))
+            path, extra_path = Path(report.photo.path), Path(extra.image.path)
+            self.assertTrue(path.exists() and extra_path.exists())
             url = reverse("dashboard:report_edit", args=[report.pk])
-            self.assertContains(self.client.get(url), "Supprimer la photo")
-            self.client.post(url, {**self.data, "remove_photo": "on"})
+            self.assertContains(self.client.get(url), "Supprimer les photos")
+            with self.captureOnCommitCallbacks(execute=True):
+                self.client.post(url, {**self.data, "remove_photo": "on"})
             report.refresh_from_db()
             self.assertFalse(report.photo)
             self.assertFalse(path.exists())
+            # Les photos supplémentaires sont aussi supprimées (option de confidentialité).
+            self.assertEqual(report.extra_photos.count(), 0)
+            self.assertFalse(extra_path.exists())
 
     def test_option_photo_absente_sans_photo(self):
-        self.assertNotContains(self.client.get(self.url), "Supprimer la photo")
+        self.assertNotContains(self.client.get(self.url), "Supprimer les photos")
 
 
 class DeleteTests(PersonasTestCase):

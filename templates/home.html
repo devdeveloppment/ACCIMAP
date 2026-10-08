@@ -4,8 +4,8 @@
 {% block content %}
 {# ------------------------------------------------ Bandeau principal : l'action est immédiate #}
 <section class="hero text-white">
-  {# Arrière-plan vidéo : autoplay/muted/loop/playsinline, object-fit cover (CSS).
-     Repli automatique sur le poster puis l'image de fond si la vidéo est absente. #}
+  {% comment %}Arrière-plan vidéo : autoplay/muted/loop/playsinline, object-fit cover (CSS).
+     Repli automatique sur le poster puis l'image de fond si la vidéo est absente.{% endcomment %}
   <video class="hero-video" autoplay muted loop playsinline preload="metadata"
          poster="{% static 'img/hero-video-poster.jpg' %}" aria-hidden="true" tabindex="-1"
          controlslist="nodownload noremoteplayback noplaybackrate" disablepictureinpicture disableremoteplayback>

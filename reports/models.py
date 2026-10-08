@@ -221,7 +221,9 @@ class AccidentReport(models.Model):
         super().save(*args, **kwargs)
 
     def remove_photo(self):
-        """Supprime la photo (fichier + référence), par ex. si elle montre des personnes."""
+        """Supprime TOUTES les photos (couverture + supplémentaires), par ex. si elles montrent des personnes."""
+        for extra in self.extra_photos.all():
+            extra.delete()   # le signal post_delete efface aussi le fichier
         if self.photo:
             storage, name = self.photo.storage, self.photo.name
             self.photo = None
