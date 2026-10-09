@@ -22,6 +22,13 @@ main p {
   hyphens: auto;
   -webkit-hyphens: auto;
 }
+/* Dans un bloc centré (.text-center sur un parent, ex. cartes de confirmation),
+   les paragraphes héritent du centrage au lieu d'être justifiés à gauche. */
+main .text-center p {
+  text-align: center;
+  hyphens: manual;
+  -webkit-hyphens: manual;
+}
 /* On n'hyphène pas les contenus techniques (références, coordonnées, codes). */
 main p.reference-code,
 main p.dev-code,
