@@ -91,7 +91,7 @@ class CsvExportTests(ExportDataMixin, PersonasTestCase):
     def test_mode_et_zone(self):
         rows = {r[0]: dict(zip(csv_rows(self.client.get(self.url))[0], r)) for r in csv_rows(self.client.get(self.url))[1:]}
         self.assertEqual(rows[self.p.reference]["Mode"], "Anonyme")
-        self.assertEqual(rows[self.p.reference]["Type d'accident"], "Autre — Vitesse excessive")
+        self.assertEqual(rows[self.p.reference]["Type d'accident"], "Vitesse excessive")
         self.assertEqual(rows[self.r.reference]["Zone de couverture"], "Hors zone")
 
     def test_injection_de_formule_neutralisee(self):

@@ -74,7 +74,7 @@ class StatusVisibilityTests(TestCase):
         )
         _, data = fetch(self.client)
         feature = next(f for f in data["features"] if f["properties"]["type"] == "OTHER")
-        self.assertEqual(feature["properties"]["type_label"], "Autre — Vitesse excessive")
+        self.assertEqual(feature["properties"]["type_label"], "Vitesse excessive")
         self.assertEqual(report.accident_type, "OTHER")
 
     def test_le_rejet_ou_la_remise_en_attente_le_retire(self):

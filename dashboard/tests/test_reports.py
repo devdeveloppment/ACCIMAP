@@ -49,8 +49,9 @@ class ReportListTests(PersonasTestCase):
 
     def test_type_autre_affiche_la_precision_choisie(self):
         page = self.get().content.decode()
-        self.assertIn("Autre — Vitesse excessive", page)
-        self.assertEqual(self.rejected.get_reported_type_display(), "Autre — Vitesse excessive")
+        self.assertIn("Vitesse excessive", page)
+        self.assertNotIn("Autre —", page)
+        self.assertEqual(self.rejected.get_reported_type_display(), "Vitesse excessive")
 
     def test_filtre_statut(self):
         for status, report in [("PENDING", self.pending), ("VERIFIED", self.verified), ("REJECTED", self.rejected)]:
