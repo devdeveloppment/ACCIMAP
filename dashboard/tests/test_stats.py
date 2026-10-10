@@ -9,7 +9,7 @@ from django.utils import timezone
 
 from accounts.models import User
 from dashboard.stats import compute_stats
-from reports.choices import AccidentType, ReportStatus, Severity
+from reports.choices import ACCIDENT_TYPE_COLORS, AccidentType, ReportStatus, Severity, accident_type_color
 from reports.models import AccidentReport
 
 from .helpers import PersonasTestCase, make_report
@@ -54,6 +54,7 @@ class ComputeStatsTests(TestCase):
     def test_series_alignees_sur_les_choix_avec_les_zeros(self):
         types = self.stats()["charts"]["types"]
         self.assertEqual(types["codes"], list(AccidentType.values))
+        self.assertEqual(types["colors"], [accident_type_color(code) for code in types["codes"]])
         self.assertEqual(dict(zip(types["codes"], types["values"])),
                          {"COLLISION": 0, "ROLLOVER": 1, "RUN_OFF_ROAD": 2, "LOSS_OF_CONTROL": 0,
                           "INTERSECTION": 0, "PILEUP": 0, "PEDESTRIAN": 0, "OTHER": 0})  # « Autre » (rejeté) exclu
@@ -61,6 +62,13 @@ class ComputeStatsTests(TestCase):
         self.assertEqual(dict(zip(severities["codes"], severities["values"])),
                          {"LOW": 1, "MEDIUM": 1, "SEVERE": 1, "CRITICAL": 0})
         self.assertEqual(types["labels"][0], "Collision")
+
+    def test_couleurs_distinctes_et_stables_pour_chaque_type(self):
+        colors = [accident_type_color(code) for code in AccidentType.values]
+        self.assertEqual(set(ACCIDENT_TYPE_COLORS), set(AccidentType.values))
+        self.assertEqual(len(colors), len(set(colors)))
+        self.assertEqual(accident_type_color("NEW_ACCIDENT_TYPE"), accident_type_color("NEW_ACCIDENT_TYPE"))
+        self.assertTrue(accident_type_color("NEW_ACCIDENT_TYPE").startswith("hsl("))
 
     def test_coherence_graphiques_et_totaux(self):
         s = self.stats()
@@ -131,6 +139,7 @@ class StatisticsPagesTests(PersonasTestCase):
             self.assertContains(response, f'id="{element}">{value}<')
         data = chart_data(response)
         self.assertEqual(data["statuses"]["values"], [2, 1, 1])
+        self.assertEqual(data["types"]["colors"], [accident_type_color(code) for code in AccidentType.values])
 
     def test_file_de_traitement_les_plus_anciens_d_abord(self):
         pending = list(self.client.get(reverse("dashboard:index")).context["pending_reports"])
@@ -186,6 +195,7 @@ class StatisticsPagesTests(PersonasTestCase):
         self.assertContains(page, "vendor/chartjs/chart.umd.js")
         self.assertContains(page, "js/dashboard_charts.js")
         self.assertEqual(set(chart_data(page)), {"period", "types", "severities", "statuses", "modes"})
+        self.assertEqual(chart_data(page)["types"]["colors"], [accident_type_color(code) for code in AccidentType.values])
 
     def test_zone_mentionnee_comme_indicative(self):
         self.assertContains(self.client.get(reverse("dashboard:statistics")), "non officielle")

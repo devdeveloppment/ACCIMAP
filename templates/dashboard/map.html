@@ -46,8 +46,8 @@
 </div>
 
 <div class="map-legend mt-2 small">
-  <strong class="me-1">Statut :</strong>
-  {% for value, label in statuses %}<span class="legend-item"><i class="sev-dot st-{{ value|lower }}"></i>{{ label }}</span>{% endfor %}
+  <strong class="me-1">Gravité :</strong>
+  {% for value, label in severities %}<span class="legend-item"><i class="sev-dot sev-{{ value|lower }}"></i>{{ label }}</span>{% endfor %}
 </div>
 <p class="small text-muted mt-2 mb-0">
   La heatmap montre les zones à forte concentration de signalements ; ce n'est pas une preuve officielle d'une zone accidentogène.

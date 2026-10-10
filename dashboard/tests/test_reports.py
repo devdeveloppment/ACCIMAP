@@ -485,7 +485,29 @@ class AdminMapTests(PersonasTestCase):
         page = self.client.get(reverse("dashboard:map"))
         for expected in ["Tous les statuts", "En attente", "Rejeté", 'name="status"', 'name="mode"', 'name="zone"', 'id="map-config"']:
             self.assertContains(page, expected)
+        for expected in ("Gravité :", "Très grave", "Grave", "Moyenne", "Faible",
+                         "sev-critical", "sev-severe", "sev-medium", "sev-low"):
+            self.assertContains(page, expected)
         config = page.context["map_config"]
         self.assertTrue(config["admin"])
         self.assertEqual(config["dataUrl"], reverse("dashboard:map_data"))
         self.assertIn("{id}", config["detailUrl"])
+
+    def test_api_admin_preserve_gravite_par_signalement_et_apres_filtrage(self):
+        severities = ("CRITICAL", "SEVERE", "MEDIUM", "LOW")
+        reports = {
+            severity: make_report(status="PENDING", severity=severity, injured_count=index)
+            for index, severity in enumerate(severities, start=1)
+        }
+        response = self.client.get(reverse("dashboard:map_data"))
+        self.assertEqual(response.status_code, 200)
+        by_id = {feature["properties"]["id"]: feature["properties"]["severity"] for feature in response.json()["features"]}
+        self.assertEqual({str(report.pk): by_id[str(report.pk)] for report in reports.values()},
+                         {str(report.pk): severity for severity, report in reports.items()})
+
+        for severity, report in reports.items():
+            with self.subTest(severity=severity):
+                filtered = self.client.get(reverse("dashboard:map_data"), {"severity": severity}).json()["features"]
+                self.assertTrue(filtered)
+                self.assertTrue(all(feature["properties"]["severity"] == severity for feature in filtered))
+                self.assertIn(str(report.pk), [feature["properties"]["id"] for feature in filtered])

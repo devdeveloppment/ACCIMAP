@@ -11,7 +11,7 @@ from datetime import timedelta
 from django.db.models import Count, Max, Min, Q, Sum
 from django.db.models.functions import Coalesce, TruncMonth
 
-from reports.choices import AccidentType, ReportStatus, Severity
+from reports.choices import AccidentType, ReportStatus, Severity, accident_type_color
 from reports.zone import get_coverage_zone
 
 DAILY_MAX_SPAN_DAYS = 62     # au-delà, regroupement par mois
@@ -93,7 +93,10 @@ def compute_stats(queryset, include_rejected=False):
         "include_rejected": include_rejected,
         "charts": {
             "period": _period_series(retained),
-            "types": _series(by_type, AccidentType.choices),
+            "types": {
+                **_series(by_type, AccidentType.choices),
+                "colors": [accident_type_color(code) for code, _ in AccidentType.choices],
+            },
             "severities": _series(by_severity, Severity.choices),
             "statuses": {
                 "labels": [label for _, label in ReportStatus.choices],

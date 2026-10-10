@@ -207,14 +207,15 @@ main code, main kbd, main samp {
 .sev-medium   { --sev: #e6b000; }   /* Moyenne   */
 .sev-severe   { --sev: #f06400; }   /* Grave     */
 .sev-critical { --sev: #d7191c; }   /* Très grave */
-/* Marqueur de carte : pastille cerclée de blanc, double ombre pour ressortir sur le fond.
-   La taille est fixée par Leaflet (iconSize) et croît avec la gravité : un accident très grave saute aux yeux. */
+/* Marqueur de carte : l'épingle SVG est ancrée par sa pointe sur la coordonnée GPS.
+   Sa taille, fixée par Leaflet, croît avec la gravité. */
 .sev-marker {
-  border-radius: 50%; background: var(--sev);
-  border: 3px solid #fff;
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, .3), 0 2px 6px rgba(0, 0, 0, .5);
+  border: 0; background: transparent; box-shadow: none;
+  line-height: 0;
 }
-.sev-marker.sev-critical { box-shadow: 0 0 0 1px rgba(0, 0, 0, .3), 0 0 0 4px rgba(215, 25, 28, .25), 0 2px 6px rgba(0, 0, 0, .5); }
+.map-pin-svg { display: block; overflow: visible; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, .45)); }
+.map-pin-svg path { fill: var(--sev); stroke: #fff; stroke-width: 1.5; stroke-linejoin: round; }
+.map-pin-svg circle { fill: #fff; }
 .sev-dot { display: inline-block; width: 15px; height: 15px; border-radius: 50%; background: var(--sev); border: 2px solid #fff; box-shadow: 0 0 0 1px #6c757d; vertical-align: -3px; margin-right: .4rem; }
 .sev-badge { background: var(--sev); color: #fff; }
 .sev-badge.sev-medium { color: #212529; }
@@ -278,10 +279,17 @@ main code, main kbd, main samp {
 .photo-gallery-item { display: block; aspect-ratio: 1; border-radius: .5rem; overflow: hidden; border: 1px solid #d9e2ec; background: #fff; }
 .photo-gallery-item img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .15s ease; }
 .photo-gallery-item:hover img { transform: scale(1.05); }
-/* Statuts (carte administrateur, légende) */
-.st-pending   { --sev: #f0ad4e; }
-.st-verified  { --sev: #2e9e5b; }
-.st-rejected  { --sev: #6c757d; }
+/* Les groupes Leaflet représentent un nombre de signalements, pas une gravité unique. */
+.severity-neutral-cluster {
+  display: flex; align-items: center; justify-content: center;
+  border: 3px solid rgba(15, 47, 79, .28); border-radius: 50%;
+  background: rgba(15, 47, 79, .16); color: var(--accimap-navy);
+  font-weight: 700; text-align: center;
+}
+.severity-neutral-cluster span {
+  width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;
+  border-radius: 50%; background: #fff; box-shadow: 0 1px 4px rgba(15, 47, 79, .25);
+}
 
 /* --- Icônes (Lucide, SVG intégré) ------------------------------------- */
 .icon { flex-shrink: 0; vertical-align: -.2em; }
@@ -541,6 +549,21 @@ main code, main kbd, main samp {
 .about-band { background: #eef3f8; }
 .about-zone { border-left: 4px solid var(--accimap-accent); }
 .about-zone .icon { color: var(--accimap-accent); }
+.emergency-panel { padding: 1.25rem; border: 1px solid #eadde0; border-radius: 1rem; background: #fff7f7; }
+.emergency-panel h2 { display: flex; align-items: center; color: var(--accimap-navy); }
+.emergency-panel h2 .icon { color: #b4232c; }
+.emergency-card {
+  min-height: 108px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: .2rem; border-radius: .8rem; color: #fff; font-size: 1.1rem; text-decoration: none;
+  box-shadow: 0 2px 5px rgba(15, 47, 79, .18); transition: filter .15s ease, transform .15s ease;
+}
+.emergency-card:hover { color: #fff; filter: brightness(.92); transform: translateY(-2px); }
+.emergency-card:focus-visible { outline-color: #f5a623; }
+.emergency-card strong { font-size: 1.65rem; line-height: 1.15; }
+.emergency-police { background: #254ebc; }
+.emergency-fire { background: #d12d32; }
+.emergency-samu { background: #159887; }
+.emergency-general { background: #17683b; }
 .status-flow { position: relative; display: grid; gap: 1.25rem; }
 .status-flow li { position: relative; display: flex; gap: 1rem; align-items: flex-start; }
 .status-flow li:not(:last-child)::before { content: ""; position: absolute; left: 17px; top: 38px; bottom: -1.25rem; width: 2px; background: #cfdbe7; }

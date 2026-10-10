@@ -45,10 +45,11 @@
 
   draw("chart-types", data.types, {
     type: "bar",
-    data: { labels: data.types.labels, datasets: [{ label: "Accidents", data: data.types.values, backgroundColor: ACCENT, borderRadius: 3 }] },
+    data: { labels: data.types.labels, datasets: [{ label: "Accidents", data: data.types.values,
+      backgroundColor: data.types.colors, hoverBackgroundColor: data.types.colors, borderRadius: 3 }] },
     options: {
       indexAxis: "y", responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
-      scales: { x: integerAxis }
+      scales: { x: integerAxis, y: { ticks: { color: data.types.colors, font: { weight: 600 } } } }
     }
   });
 

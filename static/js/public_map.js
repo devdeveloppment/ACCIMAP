@@ -13,11 +13,9 @@
   var dateFrom = form.elements.date_from, dateTo = form.elements.date_to;
 
   var SEVERITY_CLASS = { LOW: "sev-low", MEDIUM: "sev-medium", SEVERE: "sev-severe", CRITICAL: "sev-critical" };
-  // Taille du marqueur selon la gravité : plus c'est grave, plus la pastille est grande (lecture immédiate).
-  var SEVERITY_SIZE = { LOW: 22, MEDIUM: 26, SEVERE: 30, CRITICAL: 34 };
-  // Mode administrateur : même carte, mais tous les statuts, marqueurs colorés par statut.
+  // Taille du marqueur selon la gravité : plus c'est grave, plus l'épingle est grande.
+  var SEVERITY_SIZE = { LOW: 24, MEDIUM: 28, SEVERE: 32, CRITICAL: 36 };
   var ADMIN = !!cfg.admin;
-  var STATUS_CLASS = { PENDING: "st-pending", VERIFIED: "st-verified", REJECTED: "st-rejected" };
   var STATUS_BADGE = { PENDING: "text-bg-warning", VERIFIED: "text-bg-success", REJECTED: "text-bg-secondary" };
 
   if (typeof L === "undefined") {
@@ -40,7 +38,14 @@
     .addTo(map);
 
   var cluster = L.markerClusterGroup({
-    showCoverageOnHover: false, maxClusterRadius: 50, spiderfyOnMaxZoom: true, chunkedLoading: true
+    showCoverageOnHover: false, maxClusterRadius: 50, spiderfyOnMaxZoom: true, chunkedLoading: true,
+    iconCreateFunction: function (group) {
+      return L.divIcon({
+        html: '<span>' + group.getChildCount() + '</span>',
+        className: "severity-neutral-cluster",
+        iconSize: [40, 40]
+      });
+    }
   });
   var HEAT_GRADIENT = { 0.2: "#2c7bb6", 0.45: "#abd9e9", 0.65: "#ffffbf", 0.85: "#fdae61", 1.0: "#d7191c" };
   // maxZoom = niveau à partir duquel l'intensité est pleine : en dessous, leaflet.heat l'atténue
@@ -84,13 +89,16 @@
 
   /* ---------- Marqueurs et popups (informations publiques uniquement) ---------- */
   function iconFor(p) {
-    var cls = ADMIN ? STATUS_CLASS[p.status] : SEVERITY_CLASS[p.severity];
-    // En mode administrateur les marqueurs reflètent le statut (taille uniforme) ; côté public, la taille suit la gravité.
-    var size = ADMIN ? 26 : (SEVERITY_SIZE[p.severity] || 26);
-    var half = size / 2;
+    var cls = SEVERITY_CLASS[p.severity] || "sev-medium";
+    // La gravité pilote toujours la couleur ; en admin la taille reste uniforme.
+    var size = ADMIN ? 28 : (SEVERITY_SIZE[p.severity] || 28);
+    var height = Math.round(size * 1.25);
     return L.divIcon({
-      className: "sev-marker " + (cls || "sev-medium"),
-      iconSize: [size, size], iconAnchor: [half, half], popupAnchor: [0, -half]
+      className: "sev-marker " + cls,
+      html: '<svg class="map-pin-svg" width="' + size + '" height="' + height + '" viewBox="0 0 32 40" aria-hidden="true" focusable="false">' +
+        '<path d="M16 1C7.72 1 1 7.72 1 16c0 10 15 23 15 23s15-13 15-23C31 7.72 24.28 1 16 1Z"/>' +
+        '<circle cx="16" cy="16" r="5.5"/></svg>',
+      iconSize: [size, height], iconAnchor: [size / 2, height], popupAnchor: [0, -height]
     });
   }
 

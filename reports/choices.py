@@ -45,6 +45,29 @@ ACCIDENT_TYPE_ICONS = {
     AccidentType.OTHER: "ellipsis",
 }
 
+ACCIDENT_TYPE_COLORS = {
+    AccidentType.COLLISION: "#2563eb",
+    AccidentType.ROLLOVER: "#7c3aed",
+    AccidentType.RUN_OFF_ROAD: "#0f766e",
+    AccidentType.LOSS_OF_CONTROL: "#d97706",
+    AccidentType.INTERSECTION: "#be185d",
+    AccidentType.PILEUP: "#0e7490",
+    AccidentType.PEDESTRIAN: "#4338ca",
+    AccidentType.OTHER: "#475569",
+}
+
+
+def accident_type_color(code):
+    """Retourne la couleur stable d'un type, avec une teinte déterministe pour les nouveaux codes."""
+    if code in ACCIDENT_TYPE_COLORS:
+        return ACCIDENT_TYPE_COLORS[code]
+
+    value = 0
+    for character in str(code):
+        value = (value * 31 + ord(character)) & 0xFFFFFFFF
+    hue = value % 360
+    return f"hsl({hue} 62% 42%)"
+
 
 class Severity(models.TextChoices):
     LOW = "LOW", "Faible"

@@ -60,8 +60,51 @@ class PublicMapPageTests(TestCase):
             with self.subTest(path=path):
                 self.assertIsNotNone(finders.find(path), path)
 
+    def test_marqueurs_epingles_ancrees_sur_le_point_gps(self):
+        script = finders.find("js/public_map.js")
+        with open(script, encoding="utf-8") as source:
+            javascript = source.read()
+        self.assertIn('class="map-pin-svg"', javascript)
+        self.assertIn('iconAnchor: [size / 2, height]', javascript)
+        self.assertIn("popupAnchor: [0, -height]", javascript)
+        stylesheet = finders.find("css/accimap.css")
+        with open(stylesheet, encoding="utf-8") as source:
+            css = source.read()
+        for rule in (
+            ".sev-critical { --sev: #d7191c; }",
+            ".sev-severe   { --sev: #f06400; }",
+            ".sev-medium   { --sev: #e6b000; }",
+            ".sev-low      { --sev: #1a9641; }",
+        ):
+            self.assertIn(rule, css)
+        self.assertIn(".map-pin-svg path { fill: var(--sev);", css)
+
+    def test_epingles_utilisent_toujours_la_gravite_et_conservent_les_popups(self):
+        script = finders.find("js/public_map.js")
+        with open(script, encoding="utf-8") as source:
+            javascript = source.read()
+        self.assertIn('var cls = SEVERITY_CLASS[p.severity] || "sev-medium";', javascript)
+        self.assertNotIn("STATUS_CLASS[p.status]", javascript)
+        self.assertIn('className: "sev-marker " + cls', javascript)
+        self.assertIn('marker.bindPopup(function () { return popupContent(p); }', javascript)
+        self.assertIn("severity-neutral-cluster", javascript)
+
 
 class HomePageTests(TestCase):
+    def test_numeros_d_urgence_sur_accueil_et_a_propos_dans_l_ordre(self):
+        for url_name in ("home", "about"):
+            with self.subTest(page=url_name):
+                page = self.client.get(reverse(url_name))
+                self.assertEqual(page.status_code, 200)
+                html = page.content.decode()
+                labels = ("Police", "Pompiers", "SAMU", "Urgences")
+                numbers = ("111", "185", "144", "112")
+                positions = [html.index(label) for label in labels]
+                self.assertEqual(positions, sorted(positions))
+                for label, number in zip(labels, numbers):
+                    self.assertIn(f'href="tel:{number}"', html)
+                    self.assertIn(f">{number}</strong>", html)
+
     def test_acces_demandes(self):
         page = self.client.get(reverse("home"))
         for expected in ["Signaler un accident", "Signaler anonymement", "Se connecter", "Voir la carte",

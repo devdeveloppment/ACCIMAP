@@ -173,6 +173,19 @@ class GeometryTests(TestCase):
                                  "severity": "CRITICAL", "severity_label": "Très grave",
                                  "date": "2026-09-20", "time": "18:45", "injured": 3, "deaths": 1})
 
+    def test_api_transmet_la_gravite_reelle_de_chaque_signalement(self):
+        severities = ("CRITICAL", "SEVERE", "MEDIUM", "LOW")
+        for index, severity in enumerate(severities, start=1):
+            make_report(status=ReportStatus.VERIFIED, severity=severity, injured_count=index)
+        _, data = fetch(self.client)
+        by_report = {feature["properties"]["injured"]: feature["properties"]["severity"] for feature in data["features"]}
+        self.assertEqual(by_report, {index: severity for index, severity in enumerate(severities, start=1)})
+        for severity in severities:
+            with self.subTest(severity=severity):
+                filtered = fetch(self.client, severity=severity)[1]["features"]
+                self.assertTrue(filtered)
+                self.assertTrue(all(feature["properties"]["severity"] == severity for feature in filtered))
+
 
 class FilterTests(TestCase):
     def setUp(self):
@@ -201,6 +214,11 @@ class FilterTests(TestCase):
     def test_gravite(self):
         self.assertEqual(self.ids(severity="SEVERE"), [2, 3])
         self.assertEqual(self.ids(severity="LOW"), [1])
+        for severity, expected in (("LOW", [1]), ("SEVERE", [2, 3])):
+            with self.subTest(severity=severity):
+                _, data = fetch(self.client, severity=severity)
+                self.assertTrue(all(feature["properties"]["severity"] == severity for feature in data["features"]))
+                self.assertEqual(sorted(feature["properties"]["injured"] for feature in data["features"]), expected)
 
     def test_combinaison(self):
         self.assertEqual(self.ids(accident_type="RUN_OFF_ROAD", severity="SEVERE"), [2])
