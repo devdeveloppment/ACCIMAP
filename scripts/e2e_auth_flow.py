@@ -74,7 +74,8 @@ def run(p, name, viewport, phone, mobile):
           page.locator(".hero a.btn", has_text="Signaler un accident").is_visible())
     check("Accueil : aucun bouton distinct « Signaler anonymement »",
           page.locator(".hero a.btn", has_text="Signaler anonymement").count() == 0)
-    check("Accueil : lien « Se connecter » visible", page.locator(".hero a", has_text="Se connecter").is_visible())
+    check("Accueil : aucun lien de connexion citoyenne",
+          page.locator(".hero a", has_text="Se connecter").count() == 0)
     no_overflow("Accueil")
     check("Menu hamburger " + ("visible (mobile)" if mobile else "masqué (ordinateur)"),
           page.locator(".navbar-toggler").is_visible() == mobile)

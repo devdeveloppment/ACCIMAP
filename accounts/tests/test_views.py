@@ -121,7 +121,7 @@ class VerifyStepTests(TestCase):
         self.assertRedirects(response, reverse("home"))
         self.assertContains(response, "Vous avez été déconnecté.")
         self.assertNotIn("_auth_user_id", self.client.session)
-        self.assertContains(response, "Se connecter")
+        self.assertNotContains(response, "Se connecter avec mon téléphone")
 
     def test_navbar_ne_montre_aucune_information_de_compte_connecte(self):
         self.client.force_login(User.objects.create_user(PHONE))
@@ -279,9 +279,10 @@ class AccessControlTests(TestCase):
 
     def test_accueil_contient_les_actions_du_cahier_des_charges(self):
         page = self.client.get(reverse("home"))
-        for expected in ["Signaler un accident", "Se connecter", "Voir la carte"]:
+        for expected in ["Signaler un accident", "Voir la carte"]:
             self.assertContains(page, expected)
         self.assertNotContains(page, "Signaler anonymement")
+        self.assertNotContains(page, "Se connecter avec mon téléphone")
 
     def test_page_404_personnalisee(self):
         self.assertContains(self.client.get("/inexistant/"), "Page introuvable", status_code=404)

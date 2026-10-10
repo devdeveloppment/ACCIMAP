@@ -107,10 +107,11 @@ class HomePageTests(TestCase):
 
     def test_acces_demandes(self):
         page = self.client.get(reverse("home"))
-        for expected in ["Signaler un accident", "Se connecter avec mon téléphone", "Voir la carte",
+        for expected in ["Signaler un accident", "Voir la carte",
                          "Qu'est-ce qu'ACCIMAP", "Comment signaler ?", "Ce que montre la carte"]:
             self.assertContains(page, expected)
         self.assertNotContains(page, "Signaler anonymement")
+        self.assertNotContains(page, "Se connecter avec mon téléphone")
         self.assertContains(page, reverse("reports:create"))
         anonymous_form = self.client.get(reverse("reports:anonymous_create"))
         self.assertEqual(anonymous_form.status_code, 200)
@@ -123,7 +124,7 @@ class HomePageTests(TestCase):
         self.assertContains(page, "btn-cta")
         self.assertContains(page, "4 étapes simples")
         self.assertNotContains(page, 'id="cta-anonymous"')
-        self.assertLess(html.index('id="cta-report"'), html.index("Se connecter avec mon téléphone"))
+        self.assertNotContains(page, "Se connecter avec mon téléphone")
 
     def test_les_quatre_etapes_correspondent_au_parcours_reel(self):
         html = self.client.get(reverse("home")).content.decode()

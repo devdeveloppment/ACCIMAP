@@ -370,7 +370,7 @@ def scenario_home(p, name, viewport, mobile):
     check("Accueil : signalement public et connexion",
           page.locator(".hero a:has-text('Signaler un accident')").count() == 1
           and page.locator(".hero a:has-text('Signaler anonymement')").count() == 0
-          and page.locator(".hero a:has-text('Se connecter')").count() >= 1)
+          and page.locator(".hero a:has-text('Se connecter')").count() == 0)
     check("Accueil : présentation d'ACCIMAP", page.locator("h2:has-text('Qu\\'est-ce qu\\'ACCIMAP')").is_visible())
     w = page.evaluate("[document.documentElement.scrollWidth, window.innerWidth]")
     check("Accueil : pas de défilement horizontal", w[0] <= w[1], str(w))
