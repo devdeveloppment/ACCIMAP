@@ -58,7 +58,7 @@ def public_features(client=None):
 
 @override_settings(OTP_DEV_MODE=True, OTP_RESEND_DELAY_SECONDS=0, REVERSE_GEOCODING_ENABLED=False)
 class FullJourneyTests(TestCase):
-    """Le parcours complet, de la connexion du citoyen jusqu'aux exports."""
+    """Le parcours complet, du signalement public jusqu'aux exports."""
 
     def setUp(self):
         cache.clear()   # compteurs anti-force-brute de la connexion privée
@@ -66,9 +66,7 @@ class FullJourneyTests(TestCase):
         self.citizen_client = Client()
         self.admin_client = Client()
 
-    def _submit_identified_report(self):
-        response = otp_login(self.citizen_client, CITIZEN_PHONE)
-        self.assertRedirects(response, "/report/", fetch_redirect_response=False)
+    def _submit_public_report(self):
         response = self.citizen_client.post(
             reverse("reports:create"), valid_report_data(description=PRIVATE_TEXT)
         )
@@ -77,12 +75,11 @@ class FullJourneyTests(TestCase):
         return AccidentReport.objects.get()
 
     def test_parcours_complet(self):
-        # 1. Citoyen : OTP -> compte créé -> signalement enregistré en attente
-        report = self._submit_identified_report()
-        citizen = User.objects.get(phone_number=CITIZEN_FULL)
-        self.assertFalse(citizen.is_staff)
-        self.assertFalse(citizen.has_usable_password())
-        self.assertEqual(report.user, citizen)
+        # 1. Visiteur non connecté : signalement public enregistré anonymement
+        report = self._submit_public_report()
+        self.assertTrue(report.is_anonymous)
+        self.assertIsNone(report.user)
+        self.assertFalse(User.objects.filter(phone_number=CITIZEN_FULL).exists())
         self.assertEqual(report.status, ReportStatus.PENDING)
         self.assertEqual((round(report.location.y, 6), round(report.location.x, 6)), (6.1319, 1.2228))
         self.assertEqual(report.location.srid, 4326)
@@ -97,12 +94,12 @@ class FullJourneyTests(TestCase):
         _, data = public_features()
         self.assertEqual(data["features"], [])
 
-        # 3. Le citoyen (session OTP) n'a aucun accès à l'espace privé : refus net (403), sans redirection
-        self.assertEqual(self.citizen_client.get(reverse("dashboard:index")).status_code, 403)
-        self.assertEqual(self.citizen_client.get(reverse("exports:xlsx")).status_code, 403)
-        self.assertEqual(self.citizen_client.get(reverse("dashboard:map_data")).status_code, 403)
+        # 3. Un visiteur ne peut pas accéder à l'espace privé
+        self.assertEqual(self.citizen_client.get(reverse("dashboard:index")).status_code, 302)
+        self.assertEqual(self.citizen_client.get(reverse("exports:xlsx")).status_code, 302)
+        self.assertEqual(self.citizen_client.get(reverse("dashboard:map_data")).status_code, 401)
         self.assertEqual(self.citizen_client.post(reverse("dashboard:report_review", args=[report.pk]),
-                                                  {"status": ReportStatus.VERIFIED}).status_code, 403)
+                                                  {"status": ReportStatus.VERIFIED}).status_code, 302)
 
         # 4. Connexion privée par identifiant + mot de passe
         self.assertRedirects(admin_login(self.admin_client), reverse("dashboard:index"),
@@ -149,7 +146,8 @@ class FullJourneyTests(TestCase):
         stats = self.admin_client.get(reverse("dashboard:statistics")).context["stats"]
         self.assertEqual(stats["counts"]["verified"], 1)
         self.assertEqual(stats["counts"]["pending"], 0)
-        self.assertEqual(stats["counts"]["identified"], 1)
+        self.assertEqual(stats["counts"]["anonymous"], 1)
+        self.assertEqual(stats["counts"]["identified"], 0)
         self.assertEqual(stats["injured"], 2)
         self.assertEqual(stats["outside_zone"], 0)
         verified_only = self.admin_client.get(
@@ -166,7 +164,7 @@ class FullJourneyTests(TestCase):
         headers = list(rows[0])
         record = dict(zip(headers, next(r for r in rows[1:] if r[0] == report.reference)))
         self.assertEqual(record["Statut"], "Vérifié")
-        self.assertEqual(record["Mode"], "Identifié")
+        self.assertEqual(record["Mode"], "Anonyme")
         self.assertAlmostEqual(record["Latitude"], 6.1319)
         self.assertAlmostEqual(record["Longitude"], 1.2228)
         self.assertEqual(record["Zone de couverture"], "Dans la zone")

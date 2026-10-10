@@ -12,6 +12,7 @@
     {% csrf_token %}
     {% include "includes/form_errors.html" %}
     {% include "includes/form_field.html" with field=form.accident_type %}
+    {% include "includes/form_field.html" with field=form.accident_cause %}
     <div class="row g-3">
       <div class="col-7">{% include "includes/form_field.html" with field=form.accident_date %}</div>
       <div class="col-5">{% include "includes/form_field.html" with field=form.accident_time %}</div>

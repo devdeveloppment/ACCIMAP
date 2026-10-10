@@ -367,8 +367,10 @@ def scenario_home(p, name, viewport, mobile):
     page.goto(BASE + "/"); page.wait_for_load_state("networkidle")
     n = public_qs().count()
     check("Accueil : chiffre réel = signalements vérifiés", page.locator("#home-stats .stat-number").inner_text().strip() == str(n), page.locator("#home-stats").inner_text())
-    check("Accueil : accès signalement identifié / anonyme / connexion",
-          all(page.locator(f".hero a:has-text('{t}')").count() >= 1 for t in ("Signaler un accident", "Signaler anonymement", "Se connecter")))
+    check("Accueil : signalement public et connexion",
+          page.locator(".hero a:has-text('Signaler un accident')").count() == 1
+          and page.locator(".hero a:has-text('Signaler anonymement')").count() == 0
+          and page.locator(".hero a:has-text('Se connecter')").count() >= 1)
     check("Accueil : présentation d'ACCIMAP", page.locator("h2:has-text('Qu\\'est-ce qu\\'ACCIMAP')").is_visible())
     w = page.evaluate("[document.documentElement.scrollWidth, window.innerWidth]")
     check("Accueil : pas de défilement horizontal", w[0] <= w[1], str(w))

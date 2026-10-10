@@ -1,4 +1,4 @@
-"""Parcours de signalement : identifié (connexion requise) et anonyme."""
+"""Parcours public de signalement sans compte ni donnée d'identification."""
 from django.conf import settings
 from django.core import signing
 from django.http import JsonResponse
@@ -9,7 +9,13 @@ from django.utils import timezone
 from django.views.decorators.http import require_GET
 from django.views.generic import FormView
 
-from .choices import ACCIDENT_TYPE_HINTS, ACCIDENT_TYPE_ICONS, AccidentType
+from .choices import (
+    ACCIDENT_CAUSE_ICONS,
+    ACCIDENT_TYPE_HINTS,
+    ACCIDENT_TYPE_ICONS,
+    AccidentCause,
+    AccidentType,
+)
 from .forms import AccidentReportForm
 from .geocoding import reverse_geocode
 from .models import ReportPhoto
@@ -21,19 +27,13 @@ SUCCESS_MAX_AGE = 3600  # la page de confirmation reste consultable 1 heure
 
 class ReportCreateView(FormView):
     """
-    Même formulaire pour les deux parcours ; seul `anonymous` change :
-
-    * anonymous=False : réservé aux utilisateurs connectés (voir urls.py) ; le
-      signalement est rattaché à leur compte.
-    * anonymous=True  : sans connexion ; AUCUN utilisateur n'est jamais rattaché,
-      même si le visiteur est connecté par ailleurs.
-
-    Le mode n'est jamais lu depuis le formulaire (impossible à falsifier côté client).
+    Le signalement public est toujours anonyme, y compris si le visiteur est déjà
+    connecté. Le mode n'est jamais lu depuis le formulaire.
     """
 
     template_name = "reports/report_form.html"
     form_class = AccidentReportForm
-    anonymous = False
+    anonymous = True
 
     def get_initial(self):
         now = timezone.localtime()
@@ -52,6 +52,10 @@ class ReportCreateView(FormView):
             type_cards=[
                 {"value": value, "label": label, "hint": ACCIDENT_TYPE_HINTS[value], "icon": ACCIDENT_TYPE_ICONS[value]}
                 for value, label in AccidentType.choices
+            ],
+            cause_cards=[
+                {"value": value, "label": label, "icon": ACCIDENT_CAUSE_ICONS[value]}
+                for value, label in AccidentCause.choices
             ],
             # Les navigateurs vident un champ fichier à chaque rechargement de page : on le dit à l'utilisateur.
             photo_lost=self.request.method == "POST" and form.is_bound and bool(form.errors) and "photos" in self.request.FILES,
@@ -86,8 +90,8 @@ class ReportCreateView(FormView):
 
     def form_valid(self, form):
         report = form.save(commit=False)
-        report.is_anonymous = self.anonymous
-        report.user = None if self.anonymous else self.request.user
+        report.is_anonymous = True
+        report.user = None
 
         # Photos (déjà validées et assainies par le formulaire) : la 1re sert de
         # couverture (report.photo), les suivantes deviennent des ReportPhoto.
@@ -100,8 +104,7 @@ class ReportCreateView(FormView):
                 [ReportPhoto(report=report, image=image) for image in photos[1:]]
             )
 
-        # Le jeton signé est sans état : rien n'est écrit en session, donc aucun lien
-        # n'est conservé entre un compte connecté et un signalement anonyme.
+        # Le jeton signé est sans état : aucune identité n'est conservée avec le signalement.
         token = signing.dumps(
             {"ref": report.reference, "anon": report.is_anonymous}, salt=SUCCESS_SALT
         )

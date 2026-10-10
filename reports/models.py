@@ -10,7 +10,7 @@ from django.core.validators import MaxValueValidator
 from django.db import connection, models
 from django.utils import timezone
 
-from .choices import AccidentType, ReportStatus, Severity
+from .choices import AccidentCause, AccidentType, ReportStatus, Severity
 from .validators import validate_photo_content, validate_photo_extension, validate_photo_size
 
 # Séquence PostgreSQL (créée par la migration 0002) qui numérote les références.
@@ -40,7 +40,7 @@ class AccidentReportQuerySet(models.QuerySet):
 
 class AccidentReport(models.Model):
     """
-    Un accident signalé par un citoyen, avec ou sans identification.
+    Un accident signalé publiquement sans rattacher le déclarant à un compte.
 
     - La clé primaire est un UUID (non devinable).
     - `reference` (ex. ACC-2026-000123) est un identifiant lisible pour l'affichage.
@@ -68,6 +68,13 @@ class AccidentReport(models.Model):
     # --- Accident --------------------------------------------------------
     accident_type = models.CharField(
         "type d'accident", max_length=30, choices=AccidentType.choices
+    )
+    accident_cause = models.CharField(
+        "Causes de l'accident",
+        max_length=30,
+        choices=AccidentCause.choices,
+        null=True,
+        blank=True,
     )
     accident_date = models.DateField("date de l'accident")
     accident_time = models.TimeField("heure de l'accident")

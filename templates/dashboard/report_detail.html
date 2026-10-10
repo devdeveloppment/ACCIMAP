@@ -18,6 +18,7 @@
       <h2 class="h5">Informations</h2>
       <dl class="row mb-0 detail-list">
         <dt class="col-sm-4">Type d'accident</dt><dd class="col-sm-8">{{ report.get_accident_type_display }}</dd>
+        <dt class="col-sm-4">Causes de l'accident</dt><dd class="col-sm-8">{{ report.get_accident_cause_display|default:"Non renseignée" }}</dd>
         <dt class="col-sm-4">Date et heure</dt><dd class="col-sm-8">{{ report.accident_date|date:"d/m/Y" }} à {{ report.accident_time|time:"H:i" }}</dd>
         <dt class="col-sm-4">Gravité estimée</dt><dd class="col-sm-8">{{ report.get_severity_display }}</dd>
         <dt class="col-sm-4">Véhicules impliqués</dt><dd class="col-sm-8">{{ report.vehicle_count|default_if_none:"Non renseigné" }}</dd>

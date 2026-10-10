@@ -25,67 +25,67 @@ def follow_success(response):
     return response.client.get(response["Location"])
 
 
-class IdentifiedReportJourneyTests(TestCase):
-    """Connexion -> /report/ -> formulaire -> enregistrement -> confirmation."""
+class PublicReportJourneyTests(TestCase):
+    """Un visiteur peut envoyer un signalement complet sans authentification."""
 
     def setUp(self):
-        self.user = User.objects.create_user("90123456")
         self.url = reverse("reports:create")
 
-    def test_visiteur_non_connecte_est_envoye_vers_la_connexion(self):
-        response = self.client.get(self.url)
-        self.assertRedirects(response, "/login/?next=/report/")
-        self.assertEqual(self.client.post(self.url, valid_report_data()).status_code, 302)
-        self.assertEqual(AccidentReport.objects.count(), 0)
-
-    def test_formulaire_affiche_pour_un_utilisateur_connecte(self):
-        self.client.force_login(self.user)
+    def test_formulaire_public_affiche_sans_demander_de_compte_ni_telephone(self):
         page = self.client.get(self.url)
+
         self.assertEqual(page.status_code, 200)
-        for expected in ["Utiliser ma position actuelle", 'id="location-map"', 'id="id_latitude"',
-                         'id="id_longitude"', "Latitude", "Longitude", "Collision",
-                         "Très grave", 'name="photos"', "+228****56"]:
+        for expected in [
+            "Signaler un accident",
+            "Aucun compte requis",
+            "Type d'accident",
+            "Précisez « Autre » (facultatif)",
+            "Utiliser ma position actuelle",
+            'id="location-map"',
+            'id="id_latitude"',
+            'id="id_longitude"',
+            "Vitesse excessive",
+            "Mauvaises conditions météorologiques et état de la chaussée",
+        ]:
             self.assertContains(page, expected)
-        self.assertNotContains(page, PHONE)  # numéro jamais affiché en entier
-
-    def test_enregistrement_identifie(self):
-        self.client.force_login(self.user)
-        response = self.client.post(self.url, valid_report_data())
-        self.assertEqual(response.status_code, 302)
-
-        report = AccidentReport.objects.get()
-        self.assertEqual(report.user, self.user)
-        self.assertFalse(report.is_anonymous)
-        self.assertEqual(report.status, ReportStatus.PENDING)
-        self.assertFalse(report.is_demo)
-        self.assertEqual(report.accident_type, "RUN_OFF_ROAD")
-        self.assertEqual(report.severity, "SEVERE")
-        self.assertEqual(report.injured_count, 2)
-        self.assertAlmostEqual(report.location.y, 6.1319)
-        self.assertAlmostEqual(report.location.x, 1.2228)
-        self.assertRegex(report.reference, r"^ACC-\d{4}-\d{6}$")
-
-    def test_confirmation(self):
-        self.client.force_login(self.user)
-        page = follow_success(self.client.post(self.url, valid_report_data()))
-        self.assertContains(page, "Votre signalement a été enregistré.")
-        self.assertContains(page, "Votre signalement est en attente de vérification.")
-        self.assertNotContains(page, "enregistré anonymement")
-        self.assertContains(page, AccidentReport.objects.get().reference)
+        self.assertNotContains(page, 'name="phone_number"')
         self.assertNotContains(page, PHONE)
 
-    def test_connexion_otp_puis_retour_au_formulaire(self):
-        """Parcours réel : /report/ -> connexion par OTP -> retour sur /report/."""
-        with override_settings(OTP_DEV_MODE=True, OTP_RESEND_DELAY_SECONDS=0):
-            self.client.get(self.url)
-            self.client.post("/login/", {"phone_number": "90123456", "next": "/report/"})
-            code = self.client.session["otp_dev_code"]
-            response = self.client.post("/verify-otp/", {"code": code})
-        self.assertRedirects(response, "/report/", fetch_redirect_response=False)
-        self.assertEqual(self.client.get("/report/").status_code, 200)
+    def test_visiteur_non_connecte_enregistre_un_signalement_et_sa_cause(self):
+        response = self.client.post(
+            self.url,
+            valid_report_data(accident_type="OTHER", accident_cause="EXCESSIVE_SPEED"),
+        )
+
+        self.assertEqual(response.status_code, 302)
+        report = AccidentReport.objects.get()
+        self.assertIsNone(report.user)
+        self.assertTrue(report.is_anonymous)
+        self.assertEqual(report.accident_type, "OTHER")
+        self.assertEqual(report.accident_cause, "EXCESSIVE_SPEED")
+        self.assertEqual(report.get_accident_cause_display(), "Vitesse excessive")
+        self.assertEqual(report.status, ReportStatus.PENDING)
+        self.assertFalse(report.is_demo)
+        self.assertAlmostEqual(report.location.y, 6.1319)
+        self.assertAlmostEqual(report.location.x, 1.2228)
+
+        page = follow_success(response)
+        self.assertContains(page, "Votre signalement a été enregistré anonymement.")
+        self.assertContains(page, report.reference)
+
+    def test_une_session_connectee_n_est_pas_associee_au_signalement(self):
+        user = User.objects.create_user("90123456")
+        self.client.force_login(user)
+
+        response = self.client.post(self.url, valid_report_data())
+
+        report = AccidentReport.objects.get()
+        self.assertTrue(report.is_anonymous)
+        self.assertIsNone(report.user)
+        self.assertEqual(user.reports.count(), 0)
+        self.assertNotContains(follow_success(response), PHONE)
 
     def test_formulaire_invalide_ne_cree_rien_et_conserve_la_saisie(self):
-        self.client.force_login(self.user)
         data = valid_report_data(accident_type="", description="Texte à conserver")
         page = self.client.post(self.url, data)
         self.assertEqual(page.status_code, 200)
@@ -96,7 +96,6 @@ class IdentifiedReportJourneyTests(TestCase):
 
     def test_csrf_obligatoire(self):
         strict = Client(enforce_csrf_checks=True)
-        strict.force_login(self.user)
         self.assertEqual(strict.post(self.url, valid_report_data()).status_code, 403)
         self.assertEqual(AccidentReport.objects.count(), 0)
 
@@ -129,7 +128,8 @@ class AnonymousReportJourneyTests(TestCase):
     def test_accessible_sans_connexion(self):
         page = self.client.get(self.url)
         self.assertEqual(page.status_code, 200)
-        self.assertContains(page, "Signalement anonyme")
+        self.assertContains(page, "Signaler un accident")
+        self.assertContains(page, "Aucun compte requis")
         self.assertContains(page, "Utiliser ma position actuelle")
 
     def test_enregistrement_anonyme(self):
@@ -150,7 +150,8 @@ class AnonymousReportJourneyTests(TestCase):
         user = User.objects.create_user("90123456")
         self.client.force_login(user)
         page = self.client.get(self.url)
-        self.assertContains(page, "ne sera <strong>pas</strong> rattaché à votre compte")
+        self.assertContains(page, "Aucun compte requis")
+        self.assertNotContains(page, "+22890123456")
 
         self.client.post(self.url, valid_report_data())
         report = AccidentReport.objects.get()

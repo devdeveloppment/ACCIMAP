@@ -295,6 +295,25 @@ if OTP_DEV_MODE and not DEBUG:
         stacklevel=1,
     )
 
+# ---------------------------------------------------------------------------
+# Formulaire de contact : envoi SMTP configuré exclusivement côté serveur
+# ---------------------------------------------------------------------------
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = os.getenv("SMTP_HOST", "smtp.gmail.com")
+EMAIL_PORT = env_int("SMTP_PORT", 587)
+EMAIL_HOST_USER = os.getenv("SMTP_USERNAME", "")
+EMAIL_HOST_PASSWORD = os.getenv("SMTP_PASSWORD", "")
+EMAIL_USE_TLS = env_bool("SMTP_USE_TLS", True)
+EMAIL_USE_SSL = env_bool("SMTP_USE_SSL", False)
+EMAIL_TIMEOUT = env_int("SMTP_TIMEOUT_SECONDS", 10)
+DEFAULT_FROM_EMAIL = os.getenv("CONTACT_FROM_EMAIL", EMAIL_HOST_USER)
+CONTACT_RECEIVER_EMAIL = os.getenv("CONTACT_RECEIVER_EMAIL", "atou1926@gmail.com")
+CONTACT_RATE_LIMIT = env_int("CONTACT_RATE_LIMIT", 3)
+CONTACT_RATE_WINDOW_SECONDS = env_int("CONTACT_RATE_WINDOW_SECONDS", 3600)
+
+if EMAIL_USE_TLS and EMAIL_USE_SSL:
+    raise ImproperlyConfigured("SMTP_USE_TLS et SMTP_USE_SSL ne peuvent pas être activés simultanément.")
+
 
 # ---------------------------------------------------------------------------
 # Carte (centre : Lomé)

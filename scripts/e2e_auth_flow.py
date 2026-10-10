@@ -70,8 +70,10 @@ def run(p, name, viewport, phone, mobile):
     # 1. Accueil
     page.goto(BASE + "/"); page.wait_for_load_state("networkidle")
     check("Accueil : marque ACCIMAP et titre d'accroche visibles", page.locator(".hero-brand", has_text="ACCIMAP").is_visible() and page.locator("h1", has_text="Signalez-le").is_visible())
-    for label in ["Signaler un accident", "Signaler anonymement"]:
-        check(f"Accueil : bouton « {label} » visible", page.locator(".hero a.btn", has_text=label).is_visible())
+    check("Accueil : bouton « Signaler un accident » visible",
+          page.locator(".hero a.btn", has_text="Signaler un accident").is_visible())
+    check("Accueil : aucun bouton distinct « Signaler anonymement »",
+          page.locator(".hero a.btn", has_text="Signaler anonymement").count() == 0)
     check("Accueil : lien « Se connecter » visible", page.locator(".hero a", has_text="Se connecter").is_visible())
     no_overflow("Accueil")
     check("Menu hamburger " + ("visible (mobile)" if mobile else "masqué (ordinateur)"),
@@ -83,15 +85,18 @@ def run(p, name, viewport, phone, mobile):
     page.screenshot(path=f"{SHOTS}/{name}_1_home.png")
     if mobile:
         open_menu(); page.screenshot(path=f"{SHOTS}/{name}_1b_menu.png")
-        check("Menu mobile : « Se connecter » accessible", page.locator("#mainNav a", has_text="Se connecter").is_visible())
+        check("Menu mobile : aucun contrôle de compte dans la navigation",
+              page.locator("#mainNav a, #mainNav button").filter(has_text=re.compile("Se connecter|Se déconnecter")).count() == 0)
         page.click(".navbar-toggler"); page.wait_for_selector("#mainNav:not(.show)")
 
-    # 2. Accès protégé -> connexion avec retour
+    # 2. Le signalement public est directement accessible sans compte
     page.click(".hero a.btn >> text=Signaler un accident")
-    page.wait_for_url(re.compile(r"/login/\?next=/report/"))
-    check("« Signaler un accident » sans connexion -> /login/?next=/report/", True)
+    page.wait_for_url(re.compile(r"/report/$"))
+    check("« Signaler un accident » sans connexion -> formulaire public",
+          page.locator("#report-form").is_visible())
+    page.goto(BASE + "/login/?next=/report/")
 
-    # 3. Numéro
+    # 3. L'authentification par OTP reste disponible pour les fonctions qui la nécessitent
     no_overflow("Connexion")
     page.screenshot(path=f"{SHOTS}/{name}_2_login.png")
     page.fill("#id_phone_number", "abc"); page.click("button[type=submit]")
@@ -136,25 +141,24 @@ def run(p, name, viewport, phone, mobile):
     check("Code correct -> retour à la page demandée (/report/)", True)
     check("Message « Connexion réussie »", "Connexion réussie" in page.locator(".alert-success").inner_text())
 
-    # 5. Connecté
+    # 5. Authentifié : les éléments de compte restent absents de l'interface publique
     page.goto(BASE + "/"); page.wait_for_load_state("networkidle")
     open_menu()
-    check("Connecté : numéro masqué dans la navbar", re.search(r"\+228\*{4}\d{2}", page.locator(".navbar").inner_text()) is not None)
-    check("Connecté : bouton « Se déconnecter » présent", page.locator(".navbar button", has_text="Se déconnecter").is_visible())
-    check("Connecté : plus de « Se connecter » dans la navbar", page.locator(".navbar a", has_text="Se connecter").count() == 0)
+    check("Connecté : aucun numéro dans la navbar",
+          re.search(r"\+228", page.locator(".navbar").inner_text()) is None)
+    check("Connecté : aucun bouton de déconnexion dans la navbar",
+          page.locator(".navbar button, .navbar a", has_text="Se déconnecter").count() == 0)
+    check("Connecté : aucun message de statut de compte sur l'accueil",
+          page.locator(".hero", has_text="Vous êtes connecté").count() == 0)
     check("Connecté : pas de lien Tableau de bord (non admin)", page.locator(".navbar a", has_text="Tableau de bord").count() == 0)
     page.screenshot(path=f"{SHOTS}/{name}_4_logged.png")
     r = page.goto(BASE + "/dashboard/")
     check("Citoyen -> /dashboard/ : accès refusé (403)", r.status == 403)
 
-    # 6. Déconnexion
-    page.goto(BASE + "/"); open_menu()
-    page.click(".navbar button >> text=Se déconnecter")
-    page.wait_for_selector(".alert-success")
-    check("Déconnexion : message affiché", "déconnecté" in page.locator(".alert-success").inner_text())
-    check("Déconnecté : « Se connecter » de retour sur l'accueil", page.locator(".hero a", has_text="Se connecter").is_visible())
-    page.goto(BASE + "/report/")
-    check("Après déconnexion : /report/ redemande la connexion", "/login/" in page.url)
+    # 6. Le signalement ne dépend pas de l'état de connexion
+    response = page.goto(BASE + "/report/")
+    check("Même connecté : /report/ reste un formulaire public",
+          response.status == 200 and page.locator("#report-form").is_visible())
 
     # 7. Pages annexes
     for path in ["/about/", "/map/", "/anonymous-report/"]:

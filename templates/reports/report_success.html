@@ -7,7 +7,7 @@
       <div class="success-icon" aria-hidden="true">{% icon "circle-check" size=64 %}</div>
       <h1 class="h3">Merci !</h1>
       <p class="lead mb-1" id="success-message">
-        {% if is_anonymous %}Votre signalement a été enregistré anonymement.{% else %}Votre signalement a été enregistré.{% endif %}
+        Votre signalement a été enregistré anonymement.
       </p>
       <p class="text-muted">Votre signalement est en attente de vérification.</p>
 
@@ -15,12 +15,10 @@
         <div class="small text-muted">Référence</div>
         <div class="reference-code" id="report-reference">{{ reference }}</div>
       </div>
-      {% if is_anonymous %}
       <p class="small text-muted">Cette référence ne permet pas de vous identifier : aucun lien n'est conservé avec votre compte.</p>
-      {% endif %}
 
       <div class="d-grid gap-2">
-        <a href="{% if is_anonymous %}{% url 'reports:anonymous_create' %}{% else %}{% url 'reports:create' %}{% endif %}" class="btn btn-accent">{% icon "siren" size=18 css="me-2" %}Signaler un autre accident</a>
+        <a href="{% url 'reports:create' %}" class="btn btn-accent">{% icon "siren" size=18 css="me-2" %}Signaler un autre accident</a>
         <a href="{% url 'maps:public_map' %}" class="btn btn-outline-primary">{% icon "map" size=18 css="me-2" %}Voir la carte</a>
         <a href="{% url 'home' %}" class="btn btn-link">Retour à l'accueil</a>
       </div>

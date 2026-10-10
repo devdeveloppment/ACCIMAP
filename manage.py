@@ -15,6 +15,12 @@ def main():
             "available on your PYTHONPATH environment variable? Did you "
             "forget to activate a virtual environment?"
         ) from exc
+    # Port par défaut de `runserver` configurable (RUNSERVER_PORT dans .env), utile si 8000 est déjà pris.
+    from dotenv import load_dotenv
+    load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env'))
+    if os.getenv('RUNSERVER_PORT'):
+        from django.core.management.commands import runserver
+        runserver.Command.default_port = os.environ['RUNSERVER_PORT']
     execute_from_command_line(sys.argv)
 
 

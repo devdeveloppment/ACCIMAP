@@ -165,16 +165,40 @@
 
   /* ------------------------------------------------------------------ étape 1 : type */
   var typeGrid = document.getElementById("type-grid");
+  var causeGrid = document.getElementById("cause-grid");
+  var otherTypeOptions = document.getElementById("other-type-options");
   var step1Next = document.getElementById("step1-next");
-  function syncType() { step1Next.disabled = !checked("accident_type"); typeError.hidden = true; }
+  function syncType() {
+    var type = checked("accident_type");
+    var isOther = !!type && type.value === "OTHER";
+    otherTypeOptions.hidden = !isOther;
+    step1Next.disabled = !type;
+    typeError.hidden = true;
+  }
   // Le saut automatique ne concerne que le toucher/clic : au clavier, on passe par « Continuer ».
   typeGrid.addEventListener("pointerdown", function () {
     pointerFlag = true;
     setTimeout(function () { pointerFlag = false; }, 700);
   });
-  typeGrid.addEventListener("change", function () {
+  causeGrid.addEventListener("pointerdown", function () {
+    pointerFlag = true;
+    setTimeout(function () { pointerFlag = false; }, 700);
+  });
+  typeGrid.addEventListener("change", function (event) {
+    var input = event.target;
+    if (input.name === "accident_type" && input.value !== "OTHER") {
+      form.querySelectorAll('input[name="accident_cause"]').forEach(function (cause) { cause.checked = false; });
+    }
     syncType();
-    if (pointerFlag && state.current === 1) { setTimeout(function () { if (state.current === 1) { go(2); } }, 260); }
+    if (pointerFlag && state.current === 1 && input.name === "accident_type" && input.value !== "OTHER") {
+      setTimeout(function () { if (state.current === 1) { go(2); } }, 260);
+    }
+  });
+  causeGrid.addEventListener("change", function () {
+    syncType();
+    if (pointerFlag && state.current === 1) {
+      setTimeout(function () { if (state.current === 1) { go(2); } }, 260);
+    }
   });
   syncType();
 
@@ -468,7 +492,10 @@
   /* ------------------------------------------------------------------ étape 4 : récapitulatif */
   function buildRecap() {
     var type = checked("accident_type");
-    $("#recap-type").textContent = type ? type.dataset.label : "—";
+    var cause = checked("accident_cause");
+    $("#recap-type").textContent = type
+      ? type.dataset.label + (cause ? " — " + cause.closest(".cause-card").querySelector(".type-name").textContent.trim() : "")
+      : "—";
     var icon = type ? type.closest(".type-card").querySelector(".type-icon") : null;
     $("#recap-type-icon").innerHTML = icon ? icon.innerHTML : "";
 

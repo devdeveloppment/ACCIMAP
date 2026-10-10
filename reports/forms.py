@@ -4,7 +4,7 @@ from django.conf import settings
 from django.contrib.gis.geos import Point
 from django.utils import timezone
 
-from .choices import AccidentType, Severity
+from .choices import AccidentCause, AccidentType, Severity
 from .images import sanitize_photo
 from .models import AccidentReport
 from .validators import validate_photo_content, validate_photo_extension, validate_photo_size
@@ -53,6 +53,7 @@ class ReportDetailsForm(forms.ModelForm):
         model = AccidentReport
         fields = [
             "accident_type",
+            "accident_cause",
             "accident_date",
             "accident_time",
             "severity",
@@ -63,6 +64,7 @@ class ReportDetailsForm(forms.ModelForm):
         ]
         labels = {
             "accident_type": "Type d'accident",
+            "accident_cause": "Causes de l'accident",
             "accident_date": "Date",
             "accident_time": "Heure",
             "severity": "Gravité estimée",
@@ -106,6 +108,12 @@ class ReportDetailsForm(forms.ModelForm):
                 continue
             css = "form-select" if isinstance(widget, forms.Select) else "form-control"
             widget.attrs["class"] = f"{widget.attrs.get('class', '')} {css}".strip()
+
+    def clean(self):
+        cleaned = super().clean()
+        if cleaned.get("accident_cause") and cleaned.get("accident_type") != AccidentType.OTHER:
+            self.add_error("accident_cause", "Choisissez d'abord le type « Autre ».")
+        return cleaned
 
 
 class AccidentReportForm(ReportDetailsForm):
@@ -155,6 +163,10 @@ class AccidentReportForm(ReportDetailsForm):
         # Le type d'accident se choisit par grandes cartes cliquables (rendues dans le gabarit) : pas d'option vide.
         self.fields["accident_type"].choices = list(AccidentType.choices)
         self.fields["accident_type"].widget = forms.RadioSelect()
+        self.fields["accident_cause"].choices = [
+            ("", "Sélectionner une cause (facultatif)"),
+            *AccidentCause.choices,
+        ]
         self.fields["confirm_outside_zone"].widget.attrs["class"] = "form-check-input"
         for name in ("latitude", "longitude"):
             self.fields[name].widget.attrs.update(

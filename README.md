@@ -3,8 +3,8 @@
 **Plateforme web participative de collecte et de cartographie des accidents de la circulation**
 Prototype académique, District Autonome du Grand Lomé (Togo).
 
-Les citoyens signalent un accident (avec ou sans identification), le signalement est géolocalisé et
-enregistré dans PostgreSQL/PostGIS, un administrateur le vérifie, et les signalements **vérifiés**
+Les citoyens signalent un accident sans créer de compte, le signalement est géolocalisé et enregistré
+dans PostgreSQL/PostGIS, un administrateur le vérifie, et les signalements **vérifiés**
 apparaissent sur une carte publique (marqueurs groupés, heatmap, filtres).
 
 > Statut : phases 1 à 7 terminées (fondations, authentification OTP, signalement en 4 étapes, carte publique,
@@ -14,14 +14,16 @@ apparaissent sur une carte publique (marqueurs groupés, heatmap, filtres).
 ## Fonctionnalités actuelles
 
 - Connexion par **numéro de téléphone + code OTP** (sans e-mail ni mot de passe), couche SMS interchangeable.
-- **Signalement identifié** (`/report/`, connexion requise) et **signalement anonyme** (`/anonymous-report/`),
-  en **4 étapes** : **1. Type** d'accident (8 cartes visuelles) · **2. Lieu** (carte, position GPS trouvée
+- **Signalement public, sans compte, téléphone ni code OTP obligatoire** (`/report/`; `/anonymous-report/`
+  reste un alias rétrocompatible), en **4 étapes** : **1. Type** d'accident (8 cartes visuelles) et cause
+  facultative parmi six facteurs distincts · **2. Lieu** (carte, position GPS trouvée
   automatiquement, quartier indiqué, repère déplaçable, confirmation) · **3. Détails** (date, heure, gravité,
   véhicules, blessés, décès, description, photo) · **4. Récapitulatif** puis envoi. Conçu d'abord pour le téléphone
   (boutons d'action fixés en bas de l'écran) ; **sans JavaScript**, toutes les étapes s'affichent et le formulaire
   reste utilisable.
 - Les types décrivent la **nature** de l'accident (collision, renversement, sortie de voie, perte de contrôle,
-  intersection, carambolage, piéton, autre), jamais le véhicule. Liste modifiable dans `reports/choices.py`.
+  intersection, carambolage, piéton, autre), jamais le véhicule. Les causes sont une sélection facultative,
+  distincte du type. Listes modifiables dans `reports/choices.py`.
 - Localisation par **GPS du navigateur** ou **clic sur la carte** ; latitude/longitude visibles avant l'envoi ;
   gestion du refus de permission, du GPS indisponible, du délai dépassé et de la faible précision.
 - Validation **côté serveur** des coordonnées, des dates, des nombres et des photos.
@@ -57,6 +59,7 @@ reports/     modèle AccidentReport, formulaires, validation des photos, zone de
 maps/        carte publique : page + API GeoJSON (liste blanche des champs publics)
 dashboard/   espace administrateur : statistiques, signalements, carte, utilisateurs et permissions
 exports/     exports CSV / XLSX / PDF (phase 7)
+config/     réglages, URLs racine, pages publiques et contact SMTP
 templates/   gabarits  ·  static/ fichiers statiques  ·  scripts/ vérifications navigateur
 data/        données géographiques optionnelles (zone de couverture)
 ```
@@ -81,6 +84,9 @@ python manage.py createsuperuser     # demande un numéro de téléphone et un m
 python manage.py runserver
 ```
 
+Port 8000 déjà occupé (« You don't have permission to access that port », par ex. un conteneur Docker) :
+définir `RUNSERVER_PORT=8001` dans `.env`, ou lancer `python manage.py runserver 8001`.
+
 Clé secrète : `python -c "from django.core.management.utils import get_random_secret_key as g; print(g())"`.
 
 ## Configuration (`.env`)
@@ -93,10 +99,18 @@ Toutes les variables sont documentées dans `.env.example`. Aucun secret ne doit
 | `DATABASE_URL` ou `DB_*` | Connexion PostgreSQL/PostGIS |
 | `OTP_DEV_MODE` | `True` : SMS simulé, code en console et dans un bandeau « Mode développement — SMS simulé » ; `False` : SMS réels |
 | `SMS_BACKEND`, `SMS_API_KEY`, `SMS_SENDER_ID` | `ConsoleSMSBackend` (simulation) ou `BrevoSMSBackend` (réel), clé API, Sender ID (voir ci-dessous) |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USE_TLS`, `SMTP_USE_SSL`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_TIMEOUT_SECONDS` | Paramètres serveur de l'envoi du formulaire `/contact/` (Gmail : `smtp.gmail.com`, port `587`, TLS) |
+| `CONTACT_FROM_EMAIL`, `CONTACT_RECEIVER_EMAIL` | Adresse expéditrice authentifiée et adresse de réception (par défaut `atou1926@gmail.com`) |
+| `CONTACT_RATE_LIMIT`, `CONTACT_RATE_WINDOW_SECONDS` | Limitation anti-spam des envois par adresse IP (3 par heure par défaut) |
 | `PUBLIC_MAP_SHOW_DESCRIPTION` | Publier la description libre dans les popups publics (`False` par défaut) |
 | `ADMIN_MAP_MAX_FEATURES` | Nombre maximal de points sur la carte administrateur (10000 par défaut) |
 | `COVERAGE_ZONE_GEOJSON`, `COVERAGE_ZONE_IS_OFFICIAL`, `COVERAGE_ZONE_NAME` | Zone de couverture (voir `data/README.md`) |
 | `MEDIA_STORAGE_BACKEND` | Stockage des photos (disque local par défaut) |
+
+Le formulaire de contact ne rapporte une réussite que lorsque le backend SMTP confirme l'envoi.
+Configurez les paramètres SMTP dans les variables d'environnement du serveur (ou dans `.env` en local,
+qui est ignoré par Git) ; n'ajoutez jamais le mot de passe SMTP à `.env.example`, au frontend ou au dépôt.
+Pour Gmail, créez et utilisez un mot de passe d'application après avoir activé la validation en deux étapes.
 
 ## Tests
 
@@ -245,11 +259,13 @@ concentration de signalements* ; ce n'est pas une preuve officielle qu'une zone 
 
 - Un signalement anonyme n'est **rattaché à aucun utilisateur** : le serveur force `user = NULL` et une contrainte
   PostgreSQL (`report_anonymous_has_no_user`) l'impose même en cas de contournement du code.
-- Même connecté, un utilisateur qui passe par `/anonymous-report/` reste anonyme ; la page de confirmation utilise un
-  jeton signé sans état : **aucun lien n'est écrit en session** entre le compte et le signalement.
+- Tous les signalements envoyés depuis `/report/` (ou son alias `/anonymous-report/`) restent anonymes, y compris
+  pour un utilisateur déjà connecté ; la page de confirmation utilise un jeton signé sans état : **aucun lien
+  n'est écrit en session** entre le compte et le signalement.
 - Le téléphone n'est jamais affiché publiquement (il apparaît masqué, `+228****56`, à l'utilisateur connecté).
 - Les photos sont ré-encodées : position GPS, modèle d'appareil et auteur sont supprimés avant stockage.
-- Un signalement anonyme et un signalement identifié sont **indiscernables** dans les données publiques.
+- L'authentification reste disponible pour les fonctions qui la nécessitent, notamment l'administration ; elle
+  n'est pas un prérequis au signalement public.
 
 **Ce qu'ACCIMAP ne garantit pas** (« anonyme » signifie anonyme *pour le public et pour l'application*, pas invisible)
 

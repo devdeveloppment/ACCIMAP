@@ -5,7 +5,7 @@ Vérification de bout en bout du PARCOURS DE SIGNALEMENT EN 4 ÉTAPES dans un vr
     1. Type d'accident (cartes)   2. Lieu (carte, GPS automatique, confirmation)
     3. Détails (compteurs, photo)  4. Récapitulatif et envoi
 
-Couvre : parcours identifié (connexion OTP) et anonyme ; GPS autorisé / refusé / indisponible / position
+Couvre : parcours public sans connexion ; GPS autorisé / refusé / indisponible / position
 introuvable / délai dépassé / peu précis ; sélection manuelle ; lat-lon réellement enregistrées ; position hors
 zone (avertissement + confirmation) ; photo avec EXIF ; validation SERVEUR (réouverture de l'étape en erreur) ;
 retour du navigateur ; repli SANS JavaScript ; mise en page ; absence d'emoji ; contrôle DIRECT en base.
@@ -16,7 +16,6 @@ Les tuiles OpenStreetMap et le service de quartier sont simulés (aucun accès r
 """
 import io
 import os
-import random
 import re
 import sys
 import tempfile
@@ -33,7 +32,6 @@ django.setup()
 from PIL import Image  # noqa: E402
 from playwright.sync_api import sync_playwright  # noqa: E402
 
-from accounts.models import OTPCode, User  # noqa: E402
 from reports.models import AccidentReport  # noqa: E402
 
 BASE = os.environ.get("ACCIMAP_URL", "http://localhost:8000")
@@ -43,18 +41,12 @@ os.makedirs(SHOTS, exist_ok=True)
 LOME = {"latitude": 6.1319, "longitude": 1.2228}
 PLACE = "Hédzranawoé, Lomé"
 EMOJI = re.compile("[\U0001F000-\U0001FAFF\u2600-\u27BF\u2B00-\u2BFF\u2300-\u23FF\uFE0F]")
-results, created_refs, created_phones = [], [], []
+results, created_refs = [], []
 
 
 def check(label, cond, detail=""):
     results.append(bool(cond))
     print(("  PASS " if cond else "  FAIL ") + label + (f"  [{detail}]" if detail and not cond else ""))
-
-
-def fresh_phone():
-    n = "9" + "".join(random.choice("0123456789") for _ in range(7))
-    created_phones.append("+228" + n)
-    return f"{n[:2]} {n[2:4]} {n[4:6]} {n[6:]}"
 
 
 def tile_png():
@@ -130,16 +122,6 @@ def sticky_bar_visible(page, viewport, selector, label):
     check(f"{label} : bouton d'action visible sans défiler (barre fixée en bas)", ok, str(box))
 
 
-def login_via_otp(page):
-    page.wait_for_url(re.compile(r"/login/\?next="))
-    page.fill("#id_phone_number", fresh_phone())
-    page.click("button[type=submit]")
-    page.wait_for_url(re.compile(r"/verify-otp/"))
-    page.fill(".otp-input", page.locator("#dev-code").inner_text().strip())
-    page.click("button[type=submit]")
-    page.wait_for_url(re.compile(r"/report/"))
-
-
 def record(page):
     ref = page.locator("#report-reference").inner_text().strip()
     created_refs.append(ref)
@@ -184,22 +166,24 @@ def no_emoji(page, label):
 
 
 # --------------------------------------------------------------------------
-def scenario_identified(p, name, viewport, mobile):
-    print(f"\n--- [{name}] Parcours IDENTIFIÉ : connexion -> 4 étapes -> enregistrement")
+def scenario_public(p, name, viewport, mobile):
+    print(f"\n--- [{name}] Parcours PUBLIC sans compte : 4 étapes -> enregistrement anonyme")
     browser, page = new_page(p, viewport, mobile)
     page.goto(BASE + "/"); page.wait_for_load_state("networkidle")
     check("Accueil : bouton « Signaler un accident » très visible (grand)", page.locator(".hero a.btn-accent").bounding_box()["height"] >= 52)
     page.click(".hero a.btn-accent")
-    login_via_otp(page)
     page.wait_for_load_state("networkidle")
-    check("Après connexion : retour sur le formulaire, étape 1", page.url.split("#")[0].endswith("/report/") and step(page) == 1)
+    check("Accès direct sans connexion au formulaire, étape 1",
+          page.url.split("#")[0].endswith("/report/") and step(page) == 1)
 
     # ---- Étape 1
     check("Étape 1 : titre « Que s'est-il passé ? »", "Que s'est-il passé ?" in page.locator(".report-step.is-active h2").inner_text())
-    check("Étape 1 : 8 cartes de types visuelles avec icônes SVG", page.locator(".type-card").count() == 8 and page.locator(".type-icon svg").count() == 8)
+    check("Étape 1 : 8 cartes de types visuelles avec icônes SVG", page.locator("#type-grid > .type-card").count() == 8 and page.locator("#type-grid .type-icon svg").count() == 8)
     labels = [t.strip() for t in page.locator(".type-name").all_inner_texts()]
-    check("Étape 1 : types = nature de l'accident, sans véhicule", labels == ["Collision", "Renversement", "Sortie de voie", "Perte de contrôle", "Accident à une intersection", "Carambolage / multi-collision", "Accident impliquant un piéton", "Autre"], str(labels))
-    check("Étape 1 : mode identifié, numéro masqué", re.search(r"\+228\*{4}\d{2}", page.locator("#mode-note").inner_text()) is not None)
+    check("Étape 1 : types = nature de l'accident, sans véhicule", labels[:8] == ["Collision", "Renversement", "Sortie de voie", "Perte de contrôle", "Accident à une intersection", "Carambolage / multi-collision", "Accident impliquant un piéton", "Autre"], str(labels))
+    check("Étape 1 : aucune identité ni numéro demandés",
+          "Aucun compte requis" in page.locator("#mode-note").inner_text()
+          and "+228" not in page.locator("main").inner_text())
     check("Indicateur : étape 1 active, progression 25 %", page.locator(".stepper-item.is-active").get_attribute("data-step") == "1" and page.get_attribute("#wizard-progress", "aria-valuenow") == "1")
     check("Étapes futures non cliquables", page.locator(".stepper-item[data-step='3'] .stepper-btn").is_disabled())
     check("« Continuer » désactivé tant qu'aucun type n'est choisi", page.locator("#step1-next").is_disabled())
@@ -207,8 +191,12 @@ def scenario_identified(p, name, viewport, mobile):
     if mobile:
         sticky_bar_visible(page, viewport, "#step1-next", "Étape 1")
     page.screenshot(path=f"{SHOTS}/{name}_flow_1_type.png")
-    pick_type(page, mobile, "INTERSECTION")
-    check("Un toucher sur une carte avance directement à l'étape 2", step(page) == 2)
+    tap_or_click(page, mobile, "label[for='type-OTHER']")
+    check("Choisir « Autre » révèle les six précisions",
+          page.locator("#other-type-options").is_visible() and page.locator(".cause-card").count() == 6)
+    tap_or_click(page, mobile, "label[for='cause-EXCESSIVE_SPEED']")
+    wait_step(page, 2)
+    check("Choisir une précision passe à l'étape 2", step(page) == 2)
     check("Indicateur : étape 1 terminée", page.locator(".stepper-item[data-step='1']").evaluate("e => e.classList.contains('is-done')"))
 
     # ---- Étape 2 : GPS automatique
@@ -260,11 +248,13 @@ def scenario_identified(p, name, viewport, mobile):
     # ---- Étape 4 : récapitulatif
     go_to_recap(page, mobile)
     recap = page.locator("#recap").inner_text()
-    check("Récapitulatif : type d'accident", "Accident à une intersection" in page.locator("#recap-type").inner_text())
+    check("Récapitulatif : type et précision sélectionnés",
+          "Autre — Vitesse excessive" in page.locator("#recap-type").inner_text())
     check("Récapitulatif : lieu lisible + coordonnées", PLACE in page.locator("#recap-place").inner_text() and re.search(r"6\.1319\d*, 1\.2228\d*", page.locator("#recap-coords").inner_text()), page.locator("#recap-coords").inner_text())
     check("Récapitulatif : date, heure, gravité, nombres", re.search(r"\d{2}/\d{2}/\d{4} à \d{2}:\d{2}", page.locator("#recap-datetime").inner_text()) and "Grave" in page.locator("#recap-severity").inner_text() and "Véhicules : 2" in page.locator("#recap-counts").inner_text() and "Blessés : 3" in page.locator("#recap-counts").inner_text() and "Décès : 1" in page.locator("#recap-counts").inner_text())
     check("Récapitulatif : description et photo", "Collision au carrefour" in page.locator("#recap-description").inner_text() and page.locator("#recap-photo").is_visible())
-    check("Récapitulatif : confidentialité (identifié)", "rattaché à votre compte" in page.locator("#recap-declarant").inner_text().lower())
+    check("Récapitulatif : aucune identité demandée",
+          "aucune identité n'est enregistrée" in page.locator("#recap-declarant").inner_text().lower())
     check("Récapitulatif : icône SVG du type", page.locator("#recap-type-icon svg").count() == 1)
     check("Bouton « Envoyer le signalement » clair", page.locator("#submit-report").inner_text().strip() == "Envoyer le signalement")
     no_overflow(page, "Étape 4"); tap_targets_ok(page, "Étape 4"); no_emoji(page, "Étape 4")
@@ -274,7 +264,8 @@ def scenario_identified(p, name, viewport, mobile):
 
     # Navigation : « Modifier » puis retour du navigateur
     page.click(".recap-edit[data-goto='1']"); wait_step(page, 1)
-    check("« Modifier » ramène à l'étape du type", step(page) == 1 and page.locator("#type-INTERSECTION").is_checked())
+    check("« Modifier » ramène à l'étape du type", step(page) == 1 and page.locator("#type-OTHER").is_checked()
+          and page.locator("#cause-EXCESSIVE_SPEED").is_checked())
     page.go_back(); wait_step(page, 4)
     check("Bouton « Retour » du navigateur : revient à l'étape précédente", step(page) == 4)
     page.go_back(); wait_step(page, 3); page.go_back(); wait_step(page, 2)
@@ -283,12 +274,15 @@ def scenario_identified(p, name, viewport, mobile):
 
     page.click("#submit-report")
     page.wait_for_url(re.compile(r"/report/success/"))
-    check("Confirmation : « Votre signalement a été enregistré. »", "Votre signalement a été enregistré." in page.locator("#success-message").inner_text())
+    check("Confirmation : « enregistré anonymement »",
+          "Votre signalement a été enregistré anonymement." in page.locator("#success-message").inner_text())
     check("Confirmation : « en attente de vérification »", "en attente de vérification" in page.locator("main").inner_text())
     page.screenshot(path=f"{SHOTS}/{name}_flow_5_success.png")
     report = record(page)
-    check("BASE : rattaché à l'utilisateur, is_anonymous = False, statut En attente", report.user is not None and report.is_anonymous is False and report.status == "PENDING")
-    check("BASE : type, gravité et nombres choisis", (report.accident_type, report.severity, report.vehicle_count, report.injured_count, report.death_count) == ("INTERSECTION", "SEVERE", 2, 3, 1))
+    check("BASE : aucun utilisateur, is_anonymous = True, statut En attente",
+          report.user is None and report.is_anonymous is True and report.status == "PENDING")
+    check("BASE : cause choisie correctement enregistrée", report.accident_cause == "EXCESSIVE_SPEED")
+    check("BASE : type, gravité et nombres choisis", (report.accident_type, report.severity, report.vehicle_count, report.injured_count, report.death_count) == ("OTHER", "SEVERE", 2, 3, 1))
     check("BASE : coordonnées = position confirmée (PointField SRID 4326)", abs(report.location.y - lat) < 1e-4 and abs(report.location.x - lon) < 1e-4 and report.location.srid == 4326 and abs(report.latitude - report.location.y) < 1e-6)
     data = Path(report.photo.path).read_bytes()
     check("BASE : photo sans EXIF/GPS/appareil/auteur", report.photo and all(m not in data for m in (b"Exif", b"Apple", b"iPhone", b"Dupont", b"GPS")))
@@ -302,9 +296,11 @@ def scenario_anonymous_gps_denied(p, name, viewport, mobile):
     print(f"\n--- [{name}] Parcours ANONYME : GPS refusé -> sélection manuelle")
     browser, page = new_page(p, viewport, mobile, geolocation=False)
     page.goto(BASE + "/"); page.wait_for_load_state("networkidle")
-    page.click(".hero a.btn-outline-light:has-text('anonymement')")
-    page.wait_for_url(re.compile(r"/anonymous-report/")); page.wait_for_load_state("networkidle")
-    check("Anonyme : accessible sans connexion, mode affiché", "Signalement anonyme" in page.locator("#mode-note").inner_text() and "Anonyme" in page.locator("#mode-chip").inner_text())
+    page.click(".hero a.btn-accent:has-text('Signaler un accident')")
+    page.wait_for_url(re.compile(r"/report/")); page.wait_for_load_state("networkidle")
+    check("Signalement public : formulaire accessible sans connexion",
+          "Aucun compte requis" in page.locator("#mode-note").inner_text()
+          and "Sans compte" in page.locator("#mode-chip").inner_text())
     check("Anonyme : aucun numéro affiché", "+228" not in page.locator("main").inner_text())
     pick_type(page, mobile, "PEDESTRIAN")
     page.wait_for_selector("#location-status.alert-warning")
@@ -325,7 +321,7 @@ def scenario_anonymous_gps_denied(p, name, viewport, mobile):
     check("Récapitulatif anonyme : aucune identité", "aucune identité n'est enregistrée" in page.locator("#recap-declarant").inner_text())
     check("Récapitulatif : photo absente", page.locator("#recap-photo-row").is_hidden())
     page.click("#submit-report"); page.wait_for_url(re.compile(r"/report/success/"))
-    check("Confirmation anonyme : « enregistré anonymement »", "Votre signalement a été enregistré anonymement." in page.locator("#success-message").inner_text())
+    check("Confirmation : « enregistré anonymement »", "Votre signalement a été enregistré anonymement." in page.locator("#success-message").inner_text())
     report = record(page)
     check("BASE : is_anonymous = True et aucun utilisateur", report.is_anonymous is True and report.user is None)
     check("BASE : type et coordonnées = ceux affichés (manuel)", report.accident_type == "PEDESTRIAN" and abs(report.latitude - lat) < 1e-6 and abs(report.longitude - lon) < 1e-6)
@@ -344,7 +340,7 @@ def scenario_gps_failures(p, name, viewport, mobile):
     ]
     for label, script, geoloc, expected in cases:
         browser, page = new_page(p, viewport, mobile, geolocation=geoloc, init_script=script)
-        page.goto(BASE + "/anonymous-report/"); page.wait_for_load_state("networkidle")
+        page.goto(BASE + "/report/"); page.wait_for_load_state("networkidle")
         pick_type(page, mobile)
         page.wait_for_selector("#location-status.alert-warning")
         check(f"GPS {label} : message clair", expected in page.locator("#location-status").inner_text())
@@ -352,7 +348,7 @@ def scenario_gps_failures(p, name, viewport, mobile):
         check(f"GPS {label} : la sélection manuelle reste possible", page.locator("#confirm-position-btn").is_enabled())
         browser.close()
     browser, page = new_page(p, viewport, mobile, accuracy=600)
-    page.goto(BASE + "/anonymous-report/"); page.wait_for_load_state("networkidle")
+    page.goto(BASE + "/report/"); page.wait_for_load_state("networkidle")
     pick_type(page, mobile)
     page.wait_for_selector("#location-status.alert-warning")
     check("GPS peu précis : avertissement de précision, position tout de même proposée", "peu précise" in page.locator("#location-status").inner_text() and page.input_value("#id_latitude") != "")
@@ -362,7 +358,7 @@ def scenario_gps_failures(p, name, viewport, mobile):
 def scenario_outside_zone(p, name, viewport, mobile):
     print(f"\n--- [{name}] Position HORS ZONE : avertissement, confirmation, coordonnées conservées")
     browser, page = new_page(p, viewport, mobile, geolocation=False)
-    page.goto(BASE + "/anonymous-report/"); page.wait_for_load_state("networkidle")
+    page.goto(BASE + "/report/"); page.wait_for_load_state("networkidle")
     pick_type(page, mobile, "RUN_OFF_ROAD")
     for _ in range(5):
         page.click(".leaflet-control-zoom-out"); page.wait_for_timeout(450)
@@ -388,7 +384,7 @@ def scenario_outside_zone(p, name, viewport, mobile):
 def scenario_validation(p, name, viewport, mobile):
     print(f"\n--- [{name}] Validation : client puis SERVEUR")
     browser, page = new_page(p, viewport, mobile)
-    page.goto(BASE + "/anonymous-report/"); page.wait_for_load_state("networkidle")
+    page.goto(BASE + "/report/"); page.wait_for_load_state("networkidle")
     page.click("#step1-next", force=True) if page.locator("#step1-next").is_enabled() else None
     check("Étape 1 : impossible de continuer sans type", step(page) == 1 and page.locator("#step1-next").is_disabled())
     page.locator("#stepper .stepper-item[data-step='4'] .stepper-btn").click(force=True)
@@ -427,7 +423,7 @@ def scenario_validation(p, name, viewport, mobile):
 def scenario_no_javascript(p, name, viewport, mobile):
     print(f"\n--- [{name}] Repli SANS JavaScript")
     browser, page = new_page(p, viewport, mobile, geolocation=False, js=False)
-    page.goto(BASE + "/anonymous-report/"); page.wait_for_load_state("domcontentloaded")
+    page.goto(BASE + "/report/"); page.wait_for_load_state("domcontentloaded")
     check("Sans JS : les 4 étapes sont toutes visibles", all(page.locator(f".report-step[data-step='{n}']").is_visible() for n in (1, 2, 3, 4)))
     check("Sans JS : champs latitude/longitude modifiables", page.get_attribute("#id_latitude", "readonly") is None)
     page.click("label[for='type-OTHER']")
@@ -443,7 +439,7 @@ def scenario_tiles_unavailable(p, name, viewport, mobile):
     print(f"\n--- [{name}] Fond de carte INACCESSIBLE et quartier indisponible")
     browser, page = new_page(p, viewport, mobile, geolocation=False, place=None)
     page.context.route("**/tile.openstreetmap.org/**", lambda r: r.fulfill(status=403))
-    page.goto(BASE + "/anonymous-report/"); page.wait_for_load_state("networkidle")
+    page.goto(BASE + "/report/"); page.wait_for_load_state("networkidle")
     pick_type(page, mobile)
     page.wait_for_selector("#location-status.alert-warning")
     check("Tuiles bloquées : l'utilisateur est prévenu", page.locator("#location-status").inner_text() != "")
@@ -462,9 +458,7 @@ def cleanup():
         if report.photo:
             Path(report.photo.path).unlink(missing_ok=True)
     n = reports.delete()[0]
-    OTPCode.objects.filter(phone_number__in=created_phones).delete()
-    User.objects.filter(phone_number__in=created_phones).delete()
-    print(f"\nNettoyage : {n} signalement(s) d'essai, {len(created_phones)} numéro(s) supprimés.")
+    print(f"\nNettoyage : {n} signalement(s) d'essai supprimés.")
 
 
 if __name__ == "__main__":
@@ -475,7 +469,7 @@ if __name__ == "__main__":
         with sync_playwright() as p:
             for name, viewport, mobile in suites:
                 print(f"\n================ {name.upper()} {viewport['width']}x{viewport['height']} ================")
-                for scenario in (scenario_identified, scenario_anonymous_gps_denied, scenario_gps_failures, scenario_outside_zone,
+                for scenario in (scenario_public, scenario_anonymous_gps_denied, scenario_gps_failures, scenario_outside_zone,
                                  scenario_validation, scenario_no_javascript, scenario_tiles_unavailable):
                     try:
                         scenario(p, name, viewport, mobile)

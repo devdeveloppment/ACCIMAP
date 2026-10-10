@@ -109,8 +109,8 @@ class VerifyStepTests(TestCase):
         response = self.client.post(reverse("accounts:verify_otp"), {"code": code}, follow=True)
         self.assertRedirects(response, reverse("home"))
         self.assertContains(response, "Connexion réussie")
-        self.assertContains(response, "Se déconnecter")
-        self.assertContains(response, "+228****56")
+        self.assertNotContains(response, "Se déconnecter")
+        self.assertNotContains(response, "+228****56")
         self.assertNotContains(response, FULL_PHONE)  # jamais le numéro complet
         user = User.objects.get(phone_number=FULL_PHONE)
         self.assertEqual(int(self.client.session["_auth_user_id"]), user.pk)
@@ -122,6 +122,16 @@ class VerifyStepTests(TestCase):
         self.assertContains(response, "Vous avez été déconnecté.")
         self.assertNotIn("_auth_user_id", self.client.session)
         self.assertContains(response, "Se connecter")
+
+    def test_navbar_ne_montre_aucune_information_de_compte_connecte(self):
+        self.client.force_login(User.objects.create_user(PHONE))
+
+        page = self.client.get(reverse("home"))
+
+        self.assertNotContains(page, FULL_PHONE)
+        self.assertNotContains(page, "+228****56")
+        self.assertNotContains(page, "Se déconnecter")
+        self.assertNotContains(page, reverse("accounts:logout"))
 
     def test_deconnexion_refuse_en_get(self):
         self.assertEqual(self.client.get(reverse("accounts:logout")).status_code, 405)
@@ -142,11 +152,12 @@ class NextRedirectTests(TestCase):
         code = self.client.session["otp_dev_code"]
         return self.client.post(reverse("accounts:verify_otp"), {"code": code})
 
-    def test_acces_protege_puis_retour_a_la_page_demandee(self):
-        response = self.client.get(reverse("reports:create"))
-        self.assertRedirects(response, "/login/?next=/report/")
+    def test_connexion_explicite_peut_rediriger_vers_le_signalement_public(self):
+        response = self.client.get("/login/?next=/report/")
+        self.assertEqual(response.status_code, 200)
         response = self._login_with_next("/report/")
         self.assertRedirects(response, "/report/", fetch_redirect_response=False)
+        self.assertEqual(self.client.get("/report/").status_code, 200)
 
     def test_redirection_externe_ignoree(self):
         for evil in ["https://evil.example.com/", "//evil.example.com"]:
@@ -223,15 +234,16 @@ class AccessControlTests(TestCase):
         self.admin = User.objects.create_superuser("90999999", "motdepasse-solide-42")
 
     def test_pages_publiques(self):
-        for name in ["home", "about", "maps:public_map", "reports:anonymous_create", "accounts:login"]:
+        for name in ["home", "about", "maps:public_map", "reports:create",
+                     "reports:anonymous_create", "accounts:login"]:
             with self.subTest(name=name):
                 self.assertEqual(self.client.get(reverse(name)).status_code, 200)
 
     def test_signalement_anonyme_sans_connexion(self):
         self.assertEqual(self.client.get(reverse("reports:anonymous_create")).status_code, 200)
 
-    def test_signalement_identifie_connecte_uniquement(self):
-        self.assertEqual(self.client.get(reverse("reports:create")).status_code, 302)
+    def test_signalement_public_accessible_avec_ou_sans_compte(self):
+        self.assertEqual(self.client.get(reverse("reports:create")).status_code, 200)
         self.client.force_login(self.citizen)
         self.assertEqual(self.client.get(reverse("reports:create")).status_code, 200)
 
@@ -267,8 +279,9 @@ class AccessControlTests(TestCase):
 
     def test_accueil_contient_les_actions_du_cahier_des_charges(self):
         page = self.client.get(reverse("home"))
-        for expected in ["Signaler un accident", "Signaler anonymement", "Se connecter", "Voir la carte"]:
+        for expected in ["Signaler un accident", "Se connecter", "Voir la carte"]:
             self.assertContains(page, expected)
+        self.assertNotContains(page, "Signaler anonymement")
 
     def test_page_404_personnalisee(self):
         self.assertContains(self.client.get("/inexistant/"), "Page introuvable", status_code=404)

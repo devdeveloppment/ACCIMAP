@@ -1,6 +1,6 @@
 {% extends "base.html" %}
-{% load static accounts_extras %}
-{% block title %}{% if is_anonymous %}Signaler anonymement{% else %}Signaler un accident{% endif %}{% endblock %}
+{% load static %}
+{% block title %}Signaler un accident{% endblock %}
 {% block extra_head %}<link rel="stylesheet" href="{% static 'vendor/leaflet/leaflet.css' %}">{% endblock %}
 
 {% block content %}
@@ -10,10 +10,8 @@
   {# ------------------------------------------------ En-tête : titre, mode, progression #}
   <header class="wizard-header">
     <div class="d-flex align-items-center justify-content-between gap-2 mb-3">
-      <h1 class="h4 mb-0">{% if is_anonymous %}Signaler anonymement{% else %}Signaler un accident{% endif %}</h1>
-      <span class="mode-chip" id="mode-chip">
-        {% if is_anonymous %}{% icon "venetian-mask" size=16 %}<span>Anonyme</span>{% else %}{% icon "user-round" size=16 %}<span>Connecté</span>{% endif %}
-      </span>
+      <h1 class="h4 mb-0">Signaler un accident</h1>
+      <span class="mode-chip" id="mode-chip">{% icon "shield-check" size=16 %}<span>Sans compte</span></span>
     </div>
     <ol class="stepper" id="stepper" aria-label="Étapes du signalement">
       <li class="stepper-item" data-step="1"><button type="button" class="stepper-btn" data-goto="1"><span class="stepper-dot"><span class="stepper-num">1</span>{% icon "check" size=14 css="stepper-check" %}</span><span class="stepper-label">Type</span></button></li>
@@ -27,27 +25,21 @@
   </header>
 
   <form method="post" enctype="multipart/form-data" id="report-form" data-loading
-        data-declarant="{% if is_anonymous %}Signalement anonyme : aucune identité n'est enregistrée.{% if user.is_authenticated %} Vous êtes connecté, mais ce signalement ne sera pas rattaché à votre compte.{% endif %}{% else %}Rattaché à votre compte ({{ user.phone_number|mask_phone }}). Votre numéro n'est jamais affiché publiquement.{% endif %}"
-        data-anonymous="{% if is_anonymous %}1{% else %}0{% endif %}">
+        data-declarant="Aucune identité n'est demandée ni enregistrée."
+        data-anonymous="1">
     {% csrf_token %}
     {% include "includes/form_errors.html" %}
 
     {# ================================================ ÉTAPE 1 : TYPE #}
     <section class="report-step" data-step="1" aria-labelledby="step1-title">
       <h2 class="step-title" id="step1-title" tabindex="-1">Que s'est-il passé ?</h2>
-      <p class="step-lead">Choisissez le type d'accident. Touchez une carte pour continuer.</p>
-      {% if is_anonymous %}
-      <div class="mode-note" role="note" id="mode-note">
-        {% icon "venetian-mask" size=20 css="mt-1" %}
-        <div><strong>Signalement anonyme.</strong> Aucune identité n'est demandée ni enregistrée.
-        {% if user.is_authenticated %}Connecté, mais ce signalement ne sera <strong>pas</strong> rattaché à votre compte.{% endif %}</div>
-      </div>
-      {% else %}
+      <p class="step-lead">Choisissez un type d'accident. « Autre » affiche des précisions supplémentaires.</p>
       <div class="mode-note" role="note" id="mode-note">
         {% icon "shield-check" size=20 css="mt-1" %}
-        <div>Connecté : <strong>{{ user.phone_number|mask_phone }}</strong>. Signalement rattaché à votre compte, numéro jamais affiché publiquement.</div>
+        <div><strong>Aucun compte requis.</strong> Aucune identité ni numéro de téléphone ne vous seront demandés.</div>
       </div>
-      {% endif %}
+      <fieldset class="mb-3">
+        <legend class="form-label fw-semibold fs-6">Type d'accident</legend>
       <div class="type-grid" role="radiogroup" aria-labelledby="step1-title" id="type-grid">
         {% for card in type_cards %}
         <label class="type-card" for="type-{{ card.value }}">
@@ -60,8 +52,24 @@
         </label>
         {% endfor %}
       </div>
+      <div class="other-type-options mt-3" id="other-type-options" aria-live="polite" hidden>
+        <p class="form-label fw-semibold mb-2">Précisez « Autre » (facultatif)</p>
+        <div class="type-grid cause-grid" role="radiogroup" aria-label="Précision du type Autre" id="cause-grid">
+          {% for card in cause_cards %}
+          <label class="type-card cause-card" for="cause-{{ card.value }}">
+            <input type="radio" class="type-radio cause-radio" name="accident_cause" id="cause-{{ card.value }}" value="{{ card.value }}"
+                   {% if form.accident_cause.value == card.value %}checked{% endif %}>
+            <span class="type-icon">{% icon card.icon size=28 %}</span>
+            <span class="type-name">{{ card.label }}</span>
+            <span class="type-tick">{% icon "check" size=14 %}</span>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+      </fieldset>
       {% for error in form.accident_type.errors %}<div class="invalid-feedback d-block mt-2">{{ error }}</div>{% endfor %}
       <div id="type-error" class="invalid-feedback d-block mt-2" role="alert" hidden>Veuillez choisir un type d'accident.</div>
+      {% for error in form.accident_cause.errors %}<div class="invalid-feedback d-block mt-2">{{ error }}</div>{% endfor %}
       <div class="step-actions">
         <button type="button" class="btn btn-primary btn-lg flex-grow-1" id="step1-next" data-next>Continuer {% icon "arrow-right" size=20 css="ms-1" %}</button>
       </div>
@@ -256,7 +264,7 @@
           <button type="button" class="recap-edit" data-goto="3">Modifier</button>
         </div>
         <div class="recap-row recap-privacy">
-          <span class="recap-icon">{% if is_anonymous %}{% icon "venetian-mask" size=22 %}{% else %}{% icon "shield-check" size=22 %}{% endif %}</span>
+          <span class="recap-icon">{% icon "shield-check" size=22 %}</span>
           <div class="recap-body"><div class="recap-title">Confidentialité</div><div class="recap-value" id="recap-declarant"></div></div>
         </div>
       </div>

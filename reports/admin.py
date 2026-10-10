@@ -78,7 +78,7 @@ class AccidentReportAdmin(GISModelAdmin):
 
     fieldsets = (
         ("Identification", {"fields": ("reference", "status", "mode_display", "declarant_display", "is_demo")}),
-        ("Accident", {"fields": ("accident_type", "accident_date", "accident_time", "severity", "vehicle_count",
+        ("Accident", {"fields": ("accident_type", "accident_cause", "accident_date", "accident_time", "severity", "vehicle_count",
                                  "injured_count", "death_count", "description")}),
         ("Localisation", {"fields": ("location", "latitude", "longitude", "zone_display")}),
         ("Photographie", {"fields": ("photo_display",)}),

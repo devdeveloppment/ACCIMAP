@@ -1,7 +1,7 @@
 """
 Listes de choix du signalement : un seul endroit à modifier.
 
-Pour ajouter / renommer / retirer un type ou une gravité : éditer la classe
+Pour ajouter / renommer / retirer un type, une cause ou une gravité : éditer la classe
 ci-dessous, puis lancer `python manage.py makemigrations` et `migrate`.
 Le formulaire, les filtres, les statistiques, la carte et les exports
 reprennent automatiquement ces listes.
@@ -22,6 +22,33 @@ class AccidentType(models.TextChoices):
     OTHER = "OTHER", "Autre"
 
 
+class AccidentCause(models.TextChoices):
+    """Facteurs ayant contribué à l'accident, distincts de sa nature."""
+
+    EXCESSIVE_SPEED = "EXCESSIVE_SPEED", "Vitesse excessive"
+    RULE_VIOLATION = "RULE_VIOLATION", "Non-respect des règles"
+    IMPAIRED_DRIVING = (
+        "IMPAIRED_DRIVING",
+        "Conduite sous l'emprise des stupéfiants et de l'alcool",
+    )
+    REDUCED_VISIBILITY = "REDUCED_VISIBILITY", "Visibilité dégradée"
+    MECHANICAL_FAILURE = "MECHANICAL_FAILURE", "Défaillance mécanique"
+    WEATHER_AND_ROAD_CONDITIONS = (
+        "WEATHER_AND_ROAD_CONDITIONS",
+        "Mauvaises conditions météorologiques et état de la chaussée",
+    )
+
+
+ACCIDENT_CAUSE_ICONS = {
+    AccidentCause.EXCESSIVE_SPEED: "siren",
+    AccidentCause.RULE_VIOLATION: "shield-check",
+    AccidentCause.IMPAIRED_DRIVING: "triangle-alert",
+    AccidentCause.REDUCED_VISIBILITY: "eye",
+    AccidentCause.MECHANICAL_FAILURE: "car-front",
+    AccidentCause.WEATHER_AND_ROAD_CONDITIONS: "map-pin",
+}
+
+
 # Présentation du choix dans le parcours de signalement : phrase d'aide et icône (Lucide, voir
 # static/vendor/lucide/). Modifier ici suffit : la page de choix du type utilise ces deux tables.
 ACCIDENT_TYPE_HINTS = {
@@ -32,7 +59,7 @@ ACCIDENT_TYPE_HINTS = {
     AccidentType.INTERSECTION: "Carrefour, croisement, rond-point",
     AccidentType.PILEUP: "Plusieurs véhicules enchaînés",
     AccidentType.PEDESTRIAN: "Un piéton est touché",
-    AccidentType.OTHER: "Une autre situation",
+    AccidentType.OTHER: "Choisissez une précision",
 }
 ACCIDENT_TYPE_ICONS = {
     AccidentType.COLLISION: "arrow-right-left",

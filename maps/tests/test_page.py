@@ -107,11 +107,13 @@ class HomePageTests(TestCase):
 
     def test_acces_demandes(self):
         page = self.client.get(reverse("home"))
-        for expected in ["Signaler un accident", "Signaler anonymement", "Se connecter", "Voir la carte",
+        for expected in ["Signaler un accident", "Se connecter avec mon téléphone", "Voir la carte",
                          "Qu'est-ce qu'ACCIMAP", "Comment signaler ?", "Ce que montre la carte"]:
             self.assertContains(page, expected)
+        self.assertNotContains(page, "Signaler anonymement")
         self.assertContains(page, reverse("reports:create"))
-        self.assertContains(page, reverse("reports:anonymous_create"))
+        anonymous_form = self.client.get(reverse("reports:anonymous_create"))
+        self.assertEqual(anonymous_form.status_code, 200)
         self.assertContains(page, reverse("maps:public_map"))
 
     def test_le_bouton_signaler_est_l_action_principale(self):
@@ -120,8 +122,8 @@ class HomePageTests(TestCase):
         self.assertContains(page, 'id="cta-report"')
         self.assertContains(page, "btn-cta")
         self.assertContains(page, "4 étapes simples")
-        self.assertLess(html.index('id="cta-report"'), html.index('id="cta-anonymous"'))   # d'abord l'action principale
-        self.assertLess(html.index('id="cta-anonymous"'), html.index("Se connecter avec mon téléphone"))
+        self.assertNotContains(page, 'id="cta-anonymous"')
+        self.assertLess(html.index('id="cta-report"'), html.index("Se connecter avec mon téléphone"))
 
     def test_les_quatre_etapes_correspondent_au_parcours_reel(self):
         html = self.client.get(reverse("home")).content.decode()
