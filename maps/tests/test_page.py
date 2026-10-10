@@ -102,8 +102,8 @@ class HomePageTests(TestCase):
                 positions = [html.index(label) for label in labels]
                 self.assertEqual(positions, sorted(positions))
                 for label, number in zip(labels, numbers):
-                    self.assertIn(f'href="tel:{number}"', html)
                     self.assertIn(f">{number}</strong>", html)
+                    self.assertNotIn(f'href="tel:{number}"', html)
 
     def test_acces_demandes(self):
         page = self.client.get(reverse("home"))
