@@ -134,6 +134,13 @@ class AccidentReport(models.Model):
 
     objects = AccidentReportQuerySet.as_manager()
 
+    def get_reported_type_display(self):
+        """Inclut la précision choisie sous « Autre » sans remplacer le type stocké."""
+        type_label = self.get_accident_type_display()
+        if self.accident_type == AccidentType.OTHER and self.accident_cause:
+            return f"{type_label} — {self.get_accident_cause_display()}"
+        return type_label
+
     class Meta:
         verbose_name = "signalement"
         verbose_name_plural = "signalements"

@@ -66,6 +66,17 @@ class StatusVisibilityTests(TestCase):
         _, data = fetch(self.client)
         self.assertEqual(self.injured(data), [1, 2])
 
+    def test_type_autre_expose_sa_precision_dans_le_libelle(self):
+        report = make_report(
+            status=ReportStatus.VERIFIED,
+            accident_type="OTHER",
+            accident_cause="EXCESSIVE_SPEED",
+        )
+        _, data = fetch(self.client)
+        feature = next(f for f in data["features"] if f["properties"]["type"] == "OTHER")
+        self.assertEqual(feature["properties"]["type_label"], "Autre — Vitesse excessive")
+        self.assertEqual(report.accident_type, "OTHER")
+
     def test_le_rejet_ou_la_remise_en_attente_le_retire(self):
         self.verified.set_status(ReportStatus.REJECTED, self.admin)
         self.assertEqual(self.injured(fetch(self.client)[1]), [])

@@ -12,7 +12,7 @@ def admin_feature_collection(queryset):
     rows = list(
         annotate_in_zone(queryset)
         .annotate(geometry_json=AsGeoJSON("location", precision=6))
-        .only("reference", "status", "accident_type", "severity", "accident_date",
+        .only("reference", "status", "accident_type", "accident_cause", "severity", "accident_date",
               "accident_time", "injured_count", "death_count", "is_anonymous")
         .order_by("-accident_date", "-accident_time", "pk")[: limit + 1]
     )
@@ -26,7 +26,7 @@ def admin_feature_collection(queryset):
                 "reference": r.reference,
                 "status": r.status,
                 "status_label": r.get_status_display(),
-                "type_label": r.get_accident_type_display(),
+                "type_label": r.get_reported_type_display(),
                 "severity": r.severity,
                 "severity_label": r.get_severity_display(),
                 "date": r.accident_date.isoformat(),

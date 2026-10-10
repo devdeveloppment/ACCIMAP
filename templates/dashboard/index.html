@@ -26,7 +26,7 @@
         {% for r in pending_reports %}
         <tr>
           <td class="fw-semibold">{{ r.reference }}</td>
-          <td>{{ r.get_accident_type_display }}</td>
+          <td>{{ r.get_reported_type_display }}</td>
           <td class="d-none d-sm-table-cell">{{ r.accident_date|date:"d/m/Y" }}</td>
           <td>{{ r.get_severity_display }}</td>
           <td class="d-none d-md-table-cell">{% if r.is_anonymous %}Anonyme{% else %}Identifié{% endif %}</td>

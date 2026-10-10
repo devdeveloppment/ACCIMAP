@@ -42,7 +42,7 @@ def public_feature_collection(queryset, limit=None):
 
     rows = list(
         queryset.annotate(geometry_json=AsGeoJSON("location", precision=GEOJSON_PRECISION))
-        .only("accident_type", "severity", "accident_date", "accident_time",
+        .only("accident_type", "accident_cause", "severity", "accident_date", "accident_time",
               "injured_count", "death_count", "description")
         .order_by("-accident_date", "-accident_time", "pk")[: limit + 1]
     )
@@ -53,7 +53,7 @@ def public_feature_collection(queryset, limit=None):
     for report in rows:
         properties = {
             "type": report.accident_type,
-            "type_label": report.get_accident_type_display(),
+            "type_label": report.get_reported_type_display(),
             "severity": report.severity,
             "severity_label": report.get_severity_display(),
             "date": report.accident_date.isoformat(),

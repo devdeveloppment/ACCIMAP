@@ -8,7 +8,7 @@
        Pour écarter un signalement sans l'effacer, utilisez plutôt le statut « Rejeté ».</p>
     <dl class="row small detail-list mb-3" id="delete-summary">
       <dt class="col-5">Référence</dt><dd class="col-7">{{ report.reference }}</dd>
-      <dt class="col-5">Type</dt><dd class="col-7">{{ report.get_accident_type_display }}</dd>
+      <dt class="col-5">Type</dt><dd class="col-7">{{ report.get_reported_type_display }}</dd>
       <dt class="col-5">Accident</dt><dd class="col-7">{{ report.accident_date|date:"d/m/Y" }} à {{ report.accident_time|time:"H:i" }}</dd>
       <dt class="col-5">Statut</dt><dd class="col-7">{{ report.get_status_display }}</dd>
       <dt class="col-5">Photo</dt><dd class="col-7">{% if report.photo %}Oui{% else %}Non{% endif %}</dd>

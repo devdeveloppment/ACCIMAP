@@ -82,7 +82,7 @@ COLUMNS = [
     Column("reference", "Référence", 17, "text", lambda r: r.reference),
     Column("date", "Date de l'accident", 17, "date", lambda r: r.accident_date),
     Column("time", "Heure", 8, "time", lambda r: r.accident_time),
-    Column("type", "Type d'accident", 30, "text", lambda r: r.get_accident_type_display()),
+    Column("type", "Type d'accident", 45, "text", lambda r: r.get_reported_type_display()),
     Column("severity", "Gravité", 11, "text", lambda r: r.get_severity_display()),
     Column("status", "Statut", 12, "text", lambda r: r.get_status_display()),
     Column("mode", "Mode", 11, "text", lambda r: "Anonyme" if r.is_anonymous else "Identifié"),
@@ -101,7 +101,7 @@ COLUMNS = [
 ]
 
 EXPORT_FIELDS = [
-    "reference", "accident_date", "accident_time", "accident_type", "severity", "status", "is_anonymous",
+    "reference", "accident_date", "accident_time", "accident_type", "accident_cause", "severity", "status", "is_anonymous",
     "location", "vehicle_count", "injured_count", "death_count", "description", "photo", "created_at",
     "updated_at", "verified_at", "is_demo",
 ]

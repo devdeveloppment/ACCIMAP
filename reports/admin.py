@@ -65,7 +65,7 @@ class AccidentReportAdmin(GISModelAdmin):
     gis_widget_kwargs = {"attrs": {"default_lon": 1.2314, "default_lat": 6.1725, "default_zoom": 12}}
     object_history_template = "admin/reports/accidentreport/object_history.html"
 
-    list_display = ("reference", "accident_type", "accident_date", "severity", "status", "mode_display",
+    list_display = ("reference", "reported_type_display", "accident_date", "severity", "status", "mode_display",
                     "injured_count", "death_count", "zone_display", "photo_flag", "created_at")
     list_filter = ("status", "accident_type", "severity", "is_anonymous", "is_demo",
                    ("accident_date", admin.DateFieldListFilter), ZoneFilter, ("created_at", admin.DateFieldListFilter))
@@ -90,6 +90,10 @@ class AccidentReportAdmin(GISModelAdmin):
     # ---- Données ----------------------------------------------------------------------------
     def get_queryset(self, request):
         return annotate_in_zone(super().get_queryset(request))
+
+    @admin.display(description="Type d'accident", ordering="accident_type")
+    def reported_type_display(self, obj):
+        return obj.get_reported_type_display()
 
     def has_add_permission(self, request):
         return False   # les signalements viennent des citoyens ; l'administration ne les fabrique pas

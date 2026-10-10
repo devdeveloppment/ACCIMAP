@@ -36,6 +36,7 @@ class ReportListTests(PersonasTestCase):
                                     accident_date=today - timedelta(days=10), user=self.owner,
                                     admin_note="Confirmé par la police")
         self.rejected = make_report(status="REJECTED", accident_type="OTHER", severity="CRITICAL",
+                                    accident_cause="EXCESSIVE_SPEED",
                                     accident_date=today - timedelta(days=2), is_anonymous=True, location=PARIS)
 
     def get(self, **params):
@@ -45,6 +46,11 @@ class ReportListTests(PersonasTestCase):
         response = self.get()
         self.assertEqual(response.status_code, 200)
         self.assertCountEqual(references(response), [self.pending.reference, self.verified.reference, self.rejected.reference])
+
+    def test_type_autre_affiche_la_precision_choisie(self):
+        page = self.get().content.decode()
+        self.assertIn("Autre — Vitesse excessive", page)
+        self.assertEqual(self.rejected.get_reported_type_display(), "Autre — Vitesse excessive")
 
     def test_filtre_statut(self):
         for status, report in [("PENDING", self.pending), ("VERIFIED", self.verified), ("REJECTED", self.rejected)]:

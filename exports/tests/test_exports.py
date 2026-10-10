@@ -45,7 +45,8 @@ class ExportDataMixin:
         self.v = make_report(status="VERIFIED", user=self.owner, accident_type="ROLLOVER", severity="SEVERE",
                              accident_date=today - timedelta(days=10), description="Carrefour du marché",
                              injured_count=2, death_count=1, vehicle_count=3, admin_note="NOTE-INTERNE-CONFIDENTIELLE")
-        self.p = make_report(status="PENDING", is_anonymous=True, accident_type="OTHER", severity="LOW",
+        self.p = make_report(status="PENDING", is_anonymous=True, accident_type="OTHER",
+                             accident_cause="EXCESSIVE_SPEED", severity="LOW",
                              accident_date=today - timedelta(days=3), description=FORMULA)
         self.r = make_report(status="REJECTED", user=self.owner, accident_type="OTHER", severity="CRITICAL",
                              accident_date=today - timedelta(days=1), location=PARIS, description="Hors zone")
@@ -90,6 +91,7 @@ class CsvExportTests(ExportDataMixin, PersonasTestCase):
     def test_mode_et_zone(self):
         rows = {r[0]: dict(zip(csv_rows(self.client.get(self.url))[0], r)) for r in csv_rows(self.client.get(self.url))[1:]}
         self.assertEqual(rows[self.p.reference]["Mode"], "Anonyme")
+        self.assertEqual(rows[self.p.reference]["Type d'accident"], "Autre — Vitesse excessive")
         self.assertEqual(rows[self.r.reference]["Zone de couverture"], "Hors zone")
 
     def test_injection_de_formule_neutralisee(self):

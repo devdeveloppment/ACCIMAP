@@ -50,7 +50,7 @@
       {% for r in page %}
       <tr>
         <td class="fw-semibold text-nowrap"><a href="{% url 'dashboard:report_detail' r.pk %}">{{ r.reference }}</a></td>
-        <td>{{ r.get_accident_type_display }}</td>
+        <td>{{ r.get_reported_type_display }}</td>
         <td class="d-none d-sm-table-cell text-nowrap">{{ r.accident_date|date:"d/m/Y" }}</td>
         <td class="d-none d-md-table-cell">{{ r.get_severity_display }}</td>
         <td>{% include "dashboard/_status_badge.html" with status=r.status label=r.get_status_display %}</td>
