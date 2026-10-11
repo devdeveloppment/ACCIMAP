@@ -59,7 +59,7 @@ def set_role(user, role, can_change=True, can_delete=True):
     user.is_superuser = role == ROLE_SUPERUSER
     fields = ["is_staff", "is_superuser"]
     if role == ROLE_USER and user.has_usable_password():
-        # Un citoyen se connecte par OTP uniquement : on retire tout mot de passe d'administration.
+        # Un compte utilisateur simple ne peut pas se connecter à l'espace privé.
         user.set_unusable_password()
         fields.append("password")
     user.save(update_fields=fields)

@@ -10,7 +10,6 @@ urlpatterns = [
     path("contact/", views.contact, name="contact"),
     path("healthz/", views.healthz, name="healthz"),
     path("admin/", admin.site.urls),
-    path("", include("accounts.urls")),   # /login/, /verify-otp/, /logout/
     path("", include("reports.urls")),    # /report/, /anonymous-report/
     path("", include("maps.urls")),       # /map/
     path("", include("dashboard.urls")),  # /dashboard/...

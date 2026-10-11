@@ -10,7 +10,6 @@ sont **embarqués** dans `static/vendor/` (aucun CDN, aucune police externe).
 |---|---|---|---|---|---|
 | Tuiles OpenStreetMap | navigateur | oui (fond de carte) | gratuit, usage modéré | non | **fonctionnel** |
 | Nominatim (géocodage inverse) | serveur ACCIMAP | non (facultatif) | gratuit, usage modéré | non (contact recommandé) | **fonctionnel**, `GEOCODER_CONTACT` à renseigner |
-| Brevo (SMS OTP) | serveur ACCIMAP | oui en production réelle | payant (crédits SMS) | oui (`SMS_API_KEY`) | **intégré, non utilisé** : prototype en SMS simulé, aucun SMS réel envoyé |
 | Stockage des photos | serveur ACCIMAP | oui | — | non | disque local (pas de service externe) |
 | Render (hébergement + PostgreSQL/PostGIS) | — | pour le déploiement | offre gratuite limitée / payant | compte | **phase 10**, non configuré |
 
@@ -103,43 +102,7 @@ ou de service lent : aucun libellé, aucun blocage, aucune exception.
 
 ---
 
-## 3. Brevo : SMS de connexion (OTP)
-
-| | |
-|---|---|
-| Rôle | Envoyer le code OTP de connexion citoyenne |
-| Lien officiel | https://www.brevo.com (compte) ; API : https://developers.brevo.com/docs/transactional-sms-endpoints |
-| URL | `https://api.brevo.com/v3/transactionalSMS/send` (variable `SMS_API_URL`) ; l'ancien `/v3/transactionalSMS/sms` est déprécié |
-| Méthode | `POST`, JSON, en-tête `api-key: <SMS_API_KEY>` |
-| Paramètres | `sender` (`SMS_SENDER_ID`, 11 car. max), `recipient` (`22890123456` : indicatif sans « + »), `content`, `type=transactional`, `tag=accimap-otp`, `unicodeEnabled` seulement si le texte sort de l'alphabet GSM |
-| Réponse attendue | HTTP 201 `{"messageId": …}` ; erreurs 400/401/402 `{"code", "message"}` |
-| Code | `accounts/sms.py` (`BrevoSMSBackend`), délai `SMS_TIMEOUT_SECONDS` (10 s) |
-| Variables | `SMS_BACKEND=accounts.sms.BrevoSMSBackend` (défaut), `SMS_API_KEY`, `SMS_SENDER_ID`, `OTP_DEV_MODE=False` |
-| Prérequis | crédits SMS (packs de 100, sans expiration), Sender ID approuvé pour le Togo (pas de nom générique type INFO/SMS) |
-
-**Deux modes (variables d'environnement uniquement)**
-
-- *Simulation / soutenance* : `SMS_BACKEND=accounts.sms.ConsoleSMSBackend`, `OTP_DEV_MODE=True`. `ConsoleSMSBackend`
-  reçoit le même numéro et le même message que Brevo et renvoie un identifiant `sim-…` ; aucun appel réseau, aucun
-  crédit, aucune clé ; message écrit dans la console (numéro masqué) et code présenté dans un bandeau « Mode
-  développement — SMS simulé ». Le cycle OTP (génération, empreinte, expiration, tentatives, renvoi, plafond,
-  validation, connexion) est celui de la production.
-- *Production* : `SMS_BACKEND=accounts.sms.BrevoSMSBackend`, `OTP_DEV_MODE=False`, `SMS_API_KEY`, `SMS_SENDER_ID`.
-
-**Sélection automatique** : `OTP_DEV_MODE=True` -> SMS simulé, quel que soit `SMS_BACKEND` ; `OTP_DEV_MODE=False` ->
-`SMS_BACKEND` (Brevo par défaut), le backend simulé étant alors refusé (y compris s'il est appelé directement). Le backend console est refusé hors mode dev. Pendant `manage.py test`, la clé est vidée : aucun test ne peut
-envoyer de vrai SMS.
-
-**Sécurité** : ni la clé, ni le contenu du message (code), ni le numéro complet ne sont journalisés (numéro masqué
-`+228****56`, `messageId`). Une erreur Brevo donne un message clair dans les logs (ex. `HTTP 402 : not_enough_credits`)
-et « Le SMS n'a pas pu être envoyé » à l'utilisateur, sans enregistrer de code.
-
-**Résultat obtenu** : 21 tests Brevo (API simulée) et 27 tests de simulation (réseau coupé) réussis ;
-`manage.py sms_test +228…` en simulation : cycle complet OK. **Aucun SMS réel envoyé** : pas de clé ni de crédits
-(choix du projet pour la phase prototype). Vrai test Brevo : `python manage.py sms_test --brevo --account`, puis
-`python manage.py sms_test --brevo +228XXXXXXXX`.
-
-## 4. Stockage des photos
+## 3. Stockage des photos
 
 Pas de service externe : `FileSystemStorage` (disque local, `MEDIA_ROOT`). Photos ré-encodées sans EXIF, servies
 uniquement par une vue protégée (aucune route `/media/`). Sur Render, le disque d'un service web est **éphémère** :

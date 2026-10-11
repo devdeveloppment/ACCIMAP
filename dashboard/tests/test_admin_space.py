@@ -1,9 +1,8 @@
 """
 L'administration est un ESPACE PRIVÉ, séparé de l'interface citoyenne :
   * aucun lien ni élément d'administration dans l'interface publique, pour aucun profil ;
-  * un citoyen ne peut atteindre AUCUNE URL administrative (pages, API, actions, Django Admin) ;
-  * l'accès exige la connexion PROPRE à l'espace privé (identifiant + mot de passe) ; un compte staff connecté par
-    OTP citoyen n'y a pas accès ;
+  * un utilisateur simple ne peut atteindre AUCUNE URL administrative (pages, API, actions, Django Admin) ;
+  * l'accès exige la connexion propre à l'espace privé (identifiant + mot de passe) ;
   * les permissions existantes restent appliquées à l'intérieur de l'espace privé.
 """
 import uuid
@@ -21,7 +20,7 @@ from reports.models import AccidentReport
 from .helpers import PersonasTestCase, make_report, make_user, open_admin_session
 
 PASSWORD = "Phrase-Secrete-Admin-2026"
-PUBLIC_PAGES = ["home", "about", "maps:public_map", "reports:anonymous_create", "accounts:login"]
+PUBLIC_PAGES = ["home", "about", "maps:public_map", "reports:anonymous_create"]
 
 
 def admin_get_urls(report, user):
@@ -94,8 +93,8 @@ class PublicInterfaceSeparationTests(PersonasTestCase):
         self.assertNotIn("Signaler", html)
 
 
-class CitizenNeverReachesAdministrationTests(PersonasTestCase):
-    """Un citoyen, même connecté, ne peut atteindre aucune fonction administrative, par aucun moyen."""
+class UserNeverReachesAdministrationTests(PersonasTestCase):
+    """Un utilisateur simple, même connecté, ne peut atteindre aucune fonction administrative."""
 
     def setUp(self):
         super().setUp()
@@ -108,11 +107,9 @@ class CitizenNeverReachesAdministrationTests(PersonasTestCase):
         self.assertNotIn("DONNEE-PRIVEE-ADMIN", body)
         self.assertNotIn("90111222", body)
 
-    def test_citoyen_connecte_par_le_vrai_parcours_otp(self):
+    def test_utilisateur_simple_connecte_ne_peut_pas_acceder_aux_pages_admin(self):
         client = Client()
-        with override_settings(OTP_DEV_MODE=True, OTP_RESEND_DELAY_SECONDS=0):
-            client.post(reverse("accounts:login"), {"phone_number": "90555666"})
-            client.post(reverse("accounts:verify_otp"), {"code": client.session["otp_dev_code"]})
+        client.force_login(self.target)
         self.assertIn("_auth_user_id", client.session)
         for url in admin_get_urls(self.report, self.target):
             with self.subTest(url=url):
@@ -173,13 +170,13 @@ class CitizenNeverReachesAdministrationTests(PersonasTestCase):
         self.assertEqual(self.client.get(reverse("dashboard:map_data")).status_code, 401)
 
 
-class StaffConnectedByOtpTests(PersonasTestCase):
-    """Un compte staff connecté par la connexion CITOYENNE n'a pas accès : il doit passer par l'espace privé."""
+class StaffWithoutAdminSessionTests(PersonasTestCase):
+    """Une session Django staff sans marque d'administration ne donne aucun accès."""
 
     def setUp(self):
         super().setUp()
         self.report = make_report(status="PENDING")
-        self.client.force_login(self.personas["superuser"])            # session OTP, sans marque administrateur
+        self.client.force_login(self.personas["superuser"])
 
     def test_pages_renvoient_vers_la_connexion_privee(self):
         for url in admin_get_urls(self.report, self.personas["citizen"]):

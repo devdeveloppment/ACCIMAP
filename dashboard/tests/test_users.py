@@ -1,10 +1,9 @@
 from django.contrib.admin.models import CHANGE, LogEntry
+from django.test import override_settings
 from django.urls import reverse
 
 from accounts.models import User
-from accounts.otp import AccountDisabled, request_otp, verify_otp
 from accounts.roles import PERM_CHANGE, PERM_DELETE, PERM_VIEW, ROLE_STAFF, ROLE_SUPERUSER, ROLE_USER, get_role, set_role
-from django.test import override_settings
 
 from .helpers import PersonasTestCase, make_report, make_user
 
@@ -132,24 +131,32 @@ class UserAccessTests(PersonasTestCase):
         self.assertFalse(user.has_perm(PERM_DELETE))
 
     def test_compte_desactive_ne_peut_plus_se_connecter(self):
-        self.post(role="user")
-        with override_settings(OTP_DEV_MODE=True, OTP_RESEND_DELAY_SECONDS=0):
-            result = request_otp("90333333")
-            with self.assertRaises(AccountDisabled):
-                verify_otp("90333333", result.dev_code)
+        self.post(role="staff", is_active="on")
+        self.login("superuser")
+        self.client.post(reverse("dashboard:user_set_password", args=[self.target.pk]), {
+            "new_password1": "Nouveau-Mot-De-Passe-2026",
+            "new_password2": "Nouveau-Mot-De-Passe-2026",
+        })
+        self.client.post(self.url, {"role": "staff"})  # désactivation
+        self.client.logout()
+        response = self.client.post(reverse("dashboard:login"), {
+            "username": "90333333",
+            "password": "Nouveau-Mot-De-Passe-2026",
+        })
+        self.assertContains(response, "Identifiant ou mot de passe incorrect")
 
     def test_staff_promu_doit_recevoir_un_mot_de_passe_puis_se_connecter_par_l_espace_prive(self):
         self.post(role="staff", is_active="on", can_change="on", can_delete="on")
         self.client.logout()
-        # 1) Connecté par OTP citoyen : aucun accès, renvoi vers la connexion privée.
+        # Un compte staff non connecté par le formulaire privé n'a pas accès au dashboard.
         self.client.force_login(fresh(self.target))
         self.assertRedirects(self.client.get(reverse("dashboard:index")), "/dashboard/login/?next=/dashboard/",
                              fetch_redirect_response=False)
-        # 2) Sans mot de passe défini, la connexion privée échoue.
+        # Sans mot de passe défini, la connexion privée échoue.
         self.client.logout()
         failed = self.client.post(reverse("dashboard:login"), {"username": "90333333", "password": "Nouveau-Mot-De-Passe-2026"})
         self.assertContains(failed, "Identifiant ou mot de passe incorrect")
-        # 3) Le superutilisateur définit le mot de passe ; la connexion privée réussit.
+        # Le superutilisateur définit le mot de passe ; la connexion privée réussit.
         self.login("superuser")
         self.client.post(reverse("dashboard:user_set_password", args=[self.target.pk]),
                          {"new_password1": "Nouveau-Mot-De-Passe-2026", "new_password2": "Nouveau-Mot-De-Passe-2026"})

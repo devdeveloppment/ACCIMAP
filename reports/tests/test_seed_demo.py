@@ -103,7 +103,7 @@ class SeedContentTests(TestCase):
     def test_comptes_fictifs_reserves(self):
         users = User.objects.all()
         self.assertEqual({u.phone_number for u in users}, set(DEMO_PHONES))
-        self.assertTrue(all(not u.is_staff and not u.has_usable_password() for u in users))   # connexion par OTP uniquement
+        self.assertTrue(all(not u.is_staff and not u.has_usable_password() for u in users))
 
     def test_references_uniques_et_formatees(self):
         references = [r.reference for r in self.reports]

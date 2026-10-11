@@ -2,13 +2,11 @@
 Configuration Django du projet ACCIMAP.
 
 Toute valeur sensible ou dépendante de l'environnement (clé secrète, base de
-données, SMS, hôtes autorisés...) est lue depuis les variables d'environnement
+données, hôtes autorisés...) est lue depuis les variables d'environnement
 (fichier .env en local, tableau de bord Render en production).
 Voir .env.example pour la liste complète.
 """
 import os
-import sys
-import warnings
 from pathlib import Path
 
 import dj_database_url
@@ -87,7 +85,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "django.contrib.gis",  # GeoDjango (PostGIS)
     # Applications ACCIMAP
-    "accounts",   # utilisateurs, authentification par téléphone + OTP
+    "accounts",   # comptes administrateurs et permissions
     "reports",    # signalements d'accidents (modèle principal)
     "dashboard",  # espace administrateur : stats, gestion
     "maps",       # carte publique, API GeoJSON, heatmap
@@ -200,11 +198,11 @@ AUTHENTICATION_BACKENDS = ["accounts.backends.PhoneModelBackend"]
 # Indicatif ajouté aux numéros saisis sans préfixe international (Togo : +228).
 DEFAULT_PHONE_COUNTRY_CODE = os.getenv("DEFAULT_PHONE_COUNTRY_CODE", "+228")
 
-# Noms d'URL définis dans accounts/urls.py (Phase 3).
-LOGIN_URL = "accounts:login"
+# Connexion réservée au personnel dans l'espace privé.
+LOGIN_URL = "dashboard:login"
 
-# Espace d'administration PRIVÉ : authentification propre (identifiant + mot de passe), distincte de la connexion
-# citoyenne par OTP. Une session « administrateur » expire après ADMIN_SESSION_AGE secondes.
+# Espace d'administration PRIVÉ : identifiant + mot de passe. Une session « administrateur »
+# expire après ADMIN_SESSION_AGE secondes.
 ADMIN_SESSION_AGE = env_int("ADMIN_SESSION_AGE", 8 * 3600)
 ADMIN_LOGIN_MAX_ATTEMPTS = env_int("ADMIN_LOGIN_MAX_ATTEMPTS", 5)      # échecs avant blocage temporaire
 ADMIN_LOGIN_LOCK_SECONDS = env_int("ADMIN_LOGIN_LOCK_SECONDS", 15 * 60)
@@ -259,60 +257,6 @@ MAX_UPLOAD_SIZE_MB = env_int("MAX_UPLOAD_SIZE_MB", 5)
 ALLOWED_IMAGE_EXTENSIONS = ["jpg", "jpeg", "png", "webp"]
 # Nombre maximal de photos jointes à un même signalement (la 1re est la couverture).
 MAX_PHOTOS_PER_REPORT = env_int("MAX_PHOTOS_PER_REPORT", 5)
-
-
-# ---------------------------------------------------------------------------
-# Authentification par téléphone (OTP) et SMS
-# ---------------------------------------------------------------------------
-# En mode développement, aucun SMS réel n'est envoyé : le code est écrit dans
-# la console du serveur. NE JAMAIS activer en production réelle.
-OTP_DEV_MODE = env_bool("OTP_DEV_MODE", False)
-OTP_LENGTH = env_int("OTP_LENGTH", 6)
-OTP_EXPIRY_MINUTES = env_int("OTP_EXPIRY_MINUTES", 5)
-OTP_MAX_ATTEMPTS = env_int("OTP_MAX_ATTEMPTS", 5)
-OTP_RESEND_DELAY_SECONDS = env_int("OTP_RESEND_DELAY_SECONDS", 60)
-# Plafond d'envois par numéro et par heure (évite les abus et les coûts SMS).
-OTP_MAX_REQUESTS_PER_HOUR = env_int("OTP_MAX_REQUESTS_PER_HOUR", 5)
-
-# Fournisseur SMS : chemin Python de la classe d'envoi (accounts/sms.py). Utilisé UNIQUEMENT si OTP_DEV_MODE=False
-# (en mode développement, le backend console est toujours choisi). Par défaut : Brevo (API officielle).
-SMS_BACKEND = os.getenv("SMS_BACKEND", "accounts.sms.BrevoSMSBackend")
-SMS_API_KEY = os.getenv("SMS_API_KEY", "")          # clé API Brevo (xkeysib-...) : JAMAIS dans Git
-SMS_API_SECRET = os.getenv("SMS_API_SECRET", "")    # non utilisé par Brevo (réservé à d'autres fournisseurs)
-SMS_SENDER_ID = os.getenv("SMS_SENDER_ID", "ACCIMAP")   # Sender ID approuvé par Brevo pour le Togo (11 car. max)
-SMS_API_URL = os.getenv("SMS_API_URL", "https://api.brevo.com/v3/transactionalSMS/send")
-SMS_TIMEOUT_SECONDS = env_int("SMS_TIMEOUT_SECONDS", 10)
-
-if sys.argv[1:2] == ["test"]:
-    # Garde-fou : aucun test automatisé ne doit pouvoir envoyer un vrai SMS (payant), même si .env contient une clé.
-    SMS_API_KEY = ""
-
-if OTP_DEV_MODE and not DEBUG:
-    warnings.warn(
-        "OTP_DEV_MODE est actif alors que DEBUG=False : les codes OTP ne sont "
-        "pas envoyés par SMS. Acceptable pour une démonstration, "
-        "jamais pour une utilisation réelle.",
-        stacklevel=1,
-    )
-
-# ---------------------------------------------------------------------------
-# Formulaire de contact : envoi SMTP configuré exclusivement côté serveur
-# ---------------------------------------------------------------------------
-EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-EMAIL_HOST = os.getenv("SMTP_HOST", "smtp.gmail.com")
-EMAIL_PORT = env_int("SMTP_PORT", 587)
-EMAIL_HOST_USER = os.getenv("SMTP_USERNAME", "")
-EMAIL_HOST_PASSWORD = os.getenv("SMTP_PASSWORD", "")
-EMAIL_USE_TLS = env_bool("SMTP_USE_TLS", True)
-EMAIL_USE_SSL = env_bool("SMTP_USE_SSL", False)
-EMAIL_TIMEOUT = env_int("SMTP_TIMEOUT_SECONDS", 10)
-DEFAULT_FROM_EMAIL = os.getenv("CONTACT_FROM_EMAIL", EMAIL_HOST_USER)
-CONTACT_RECEIVER_EMAIL = os.getenv("CONTACT_RECEIVER_EMAIL", "atou1926@gmail.com")
-CONTACT_RATE_LIMIT = env_int("CONTACT_RATE_LIMIT", 3)
-CONTACT_RATE_WINDOW_SECONDS = env_int("CONTACT_RATE_WINDOW_SECONDS", 3600)
-
-if EMAIL_USE_TLS and EMAIL_USE_SSL:
-    raise ImproperlyConfigured("SMTP_USE_TLS et SMTP_USE_SSL ne peuvent pas être activés simultanément.")
 
 
 # ---------------------------------------------------------------------------

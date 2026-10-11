@@ -8,8 +8,7 @@ from reports.tests.helpers import make_report  # noqa: F401  (réexporté pour l
 
 
 def open_admin_session(client, user):
-    """Simule une connexion par l'ESPACE PRIVÉ (identifiant + mot de passe) : session marquée administrateur.
-    Un simple force_login() équivaut, lui, à une connexion citoyenne par OTP (aucun accès à l'administration)."""
+    """Simule une connexion par l'espace privé : session marquée administrateur."""
     client.force_login(user)
     session = client.session
     session[ADMIN_SESSION_KEY] = user.pk
@@ -56,7 +55,7 @@ class PersonasTestCase(TestCase):
         if user.is_staff:
             open_admin_session(self.client, user)      # le staff passe par la connexion de l'espace privé
         else:
-            self.client.force_login(user)              # le citoyen se connecte par OTP
+            self.client.force_login(user)
 
     @staticmethod
     def phone_forms(user):

@@ -97,7 +97,7 @@ def _password_form(target, data=None):
 @superuser_required
 @require_POST
 def user_set_password(request, pk):
-    """Définit le mot de passe d'administration d'un compte STAFF (jamais d'un citoyen, qui reste en OTP)."""
+    """Définit le mot de passe d'administration d'un compte STAFF."""
     target = get_object_or_404(User, pk=pk)
     if target.pk == request.user.pk:
         return redirect("dashboard:password_change")

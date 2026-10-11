@@ -31,7 +31,7 @@ class UserAdmin(admin.ModelAdmin):
     def get_queryset(self, request):
         return super().get_queryset(request).annotate(_report_count=Count("reports"))
 
-    # Les comptes se créent par OTP (ou createsuperuser) et se désactivent plutôt qu'ils ne se suppriment.
+    # Les comptes se créent par createsuperuser ou par le tableau de bord et se désactivent plutôt qu'ils ne se suppriment.
     def has_add_permission(self, request):
         return False
 

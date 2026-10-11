@@ -1,4 +1,4 @@
-"""Utilisateurs (authentification par téléphone) et codes OTP."""
+"""Comptes administrateurs et utilisateurs associés aux actions de gestion."""
 from django.contrib.auth.base_user import AbstractBaseUser, BaseUserManager
 from django.contrib.auth.models import PermissionsMixin
 from django.db import models
@@ -11,10 +11,7 @@ class UserManager(BaseUserManager):
     use_in_migrations = True
 
     def create_user(self, phone_number, password=None, **extra_fields):
-        """
-        Crée un utilisateur « normal » (citoyen). Sans mot de passe : il se
-        connecte uniquement par OTP, son mot de passe est donc inutilisable.
-        """
+        """Crée un compte utilisateur ; seul le personnel autorisé peut se connecter."""
         phone_number = normalize_phone(phone_number)
         user = self.model(phone_number=phone_number, **extra_fields)
         if password:
@@ -35,10 +32,9 @@ class UserManager(BaseUserManager):
 
 class User(AbstractBaseUser, PermissionsMixin):
     """
-    Utilisateur ACCIMAP, identifié uniquement par son numéro de téléphone.
+    Compte ACCIMAP utilisé pour protéger et tracer les actions d'administration.
 
-    - Citoyen : is_staff=False, connexion par OTP.
-    - Administrateur : is_staff=True (+ permissions Django), accès à /dashboard/.
+    Les signalements publics sont anonymes et ne nécessitent pas de compte.
     Le numéro n'est JAMAIS affiché publiquement.
     """
 
@@ -63,33 +59,3 @@ class User(AbstractBaseUser, PermissionsMixin):
     def clean(self):
         super().clean()
         self.phone_number = normalize_phone(self.phone_number)
-
-
-class OTPCode(models.Model):
-    """
-    Code à usage unique envoyé par SMS.
-
-    Le code en clair n'est jamais stocké : seulement son empreinte (HMAC).
-    On référence le numéro (et non un User) car l'utilisateur est créé
-    seulement après la première vérification réussie.
-    """
-
-    phone_number = models.CharField("numéro de téléphone", max_length=20, db_index=True)
-    code_hash = models.CharField(max_length=64)
-    created_at = models.DateTimeField(auto_now_add=True)
-    expires_at = models.DateTimeField()
-    attempts = models.PositiveSmallIntegerField("tentatives", default=0)
-    is_used = models.BooleanField("utilisé / invalidé", default=False)
-
-    class Meta:
-        verbose_name = "code OTP"
-        verbose_name_plural = "codes OTP"
-        ordering = ["-created_at"]
-        indexes = [models.Index(fields=["phone_number", "-created_at"])]
-
-    def __str__(self):
-        return f"OTP {self.phone_number} ({self.created_at:%d/%m/%Y %H:%M})"
-
-    @property
-    def is_expired(self):
-        return timezone.now() >= self.expires_at

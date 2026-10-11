@@ -15,7 +15,7 @@ class AccimapAdminSite(admin.AdminSite):
     index_title = "Administration de secours"
 
     def has_permission(self, request):
-        # Un compte staff connecté par OTP citoyen n'a PAS accès : il faut une session administrateur.
+        # L'accès nécessite une session ouverte par la connexion sécurisée de l'administration.
         return super().has_permission(request) and is_admin_session(request)
 
     def login(self, request, extra_context=None):

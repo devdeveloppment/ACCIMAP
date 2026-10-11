@@ -38,13 +38,6 @@ services:
       - key: ADMIN_PASSWORD
         sync: false
 
-      # --- Connexion citoyenne : SMS SIMULÉ (prototype / soutenance, aucun crédit SMS)
-      #     Production réelle : OTP_DEV_MODE=False, SMS_BACKEND=accounts.sms.BrevoSMSBackend, SMS_API_KEY, SMS_SENDER_ID
-      - key: OTP_DEV_MODE
-        value: "True"
-      - key: SMS_BACKEND
-        value: accounts.sms.ConsoleSMSBackend
-
       # --- Géocodage inverse Nominatim (contact demandé par la politique d'usage d'OpenStreetMap)
       - key: GEOCODER_CONTACT
         sync: false

@@ -8,7 +8,7 @@ from reports.tests.helpers import make_image
 
 from .helpers import PersonasTestCase, make_report
 
-PUBLIC_PAGES = ["home", "about", "maps:public_map", "reports:anonymous_create", "accounts:login"]
+PUBLIC_PAGES = ["home", "about", "maps:public_map", "reports:anonymous_create"]
 ADMIN_PAGES = ["dashboard:index", "dashboard:statistics", "dashboard:report_list", "dashboard:map",
                "dashboard:map_data", "exports:index"]
 

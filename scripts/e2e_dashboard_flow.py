@@ -1,17 +1,15 @@
 """
 Vérification de bout en bout de l'ESPACE ADMINISTRATEUR dans un vrai navigateur (Chromium via Playwright).
 
-Trois profils, chacun connecté comme en situation réelle :
-  * utilisateur simple : connexion citoyenne par OTP, aucun accès ;
+Trois profils :
+  * visiteur : signalement public ouvert, accès d'administration refusé ;
   * staff              : connexion PRIVÉE (identifiant + mot de passe) ; statistiques, liste, détail, photo, carte,
                          statut, note, modification, suppression ;
   * superutilisateur   : connexion PRIVÉE ; tout ce que fait le staff + gestion des utilisateurs et des permissions.
-Un compte staff connecté par l'OTP citoyen est aussi vérifié : il est renvoyé vers la connexion privée.
+Un compte staff sans session d'administration est aussi renvoyé vers la connexion privée.
 
 Prérequis : pip install playwright && playwright install chromium
-Utilisation : OTP_RESEND_DELAY_SECONDS=0 python manage.py runserver 8000
-              (les profils citoyens se reconnectent plusieurs fois par OTP : le délai anti-renvoi de 60 s doit être
-              désactivé pour CE serveur de test uniquement)
+Utilisation : python manage.py runserver 8000
               E2E_VIEWPORT=mobile|desktop python scripts/e2e_dashboard_flow.py     (défaut : les deux)
 Toutes les données de test sont supprimées à la fin.
 """
@@ -144,20 +142,11 @@ def new_page(p, viewport, mobile):
     return browser, page
 
 
-def login(page, user, next_path="/dashboard/"):
-    page.goto(f"{BASE}/login/?next={next_path}")
-    page.fill("#id_phone_number", user.phone_number[4:])
-    page.click("button[type=submit]")
-    page.wait_for_url(re.compile(r"/verify-otp/"))
-    page.fill(".otp-input", page.locator("#dev-code").inner_text().strip())
-    page.click("button[type=submit]")
-    page.wait_for_load_state("networkidle")
-
 ADMIN_PASSWORD = "E2E-Admin-Phrase-2026"
 
 
 def admin_login(page, user, next_path="/dashboard/"):
-    """Connexion par l'ESPACE PRIVÉ : identifiant administrateur + mot de passe (jamais par l'OTP citoyen)."""
+    """Connexion à l'espace privé avec l'identifiant administrateur et son mot de passe."""
     page.goto(f"{BASE}/dashboard/login/?next={next_path}")
     page.fill("#id_username", user.phone_number[4:])
     page.fill("#id_password", ADMIN_PASSWORD)
@@ -227,24 +216,25 @@ def public_count(page):
 
 # ---------------------------------------------------------------- scénarios
 def scenario_citizen(p, name, viewport, mobile):
-    print(f"\n--- [{name}] UTILISATEUR SIMPLE : aucun accès administrateur")
+    print(f"\n--- [{name}] VISITEUR : signalement public, administration protégée")
     browser, page = new_page(p, viewport, mobile)
-    login(page, P["citizen"], "/")
+    report = page.goto(BASE + "/report/")
+    check("Signalement public accessible sans compte", report.status == 200 and page.locator("#report-form").is_visible())
     r = page.goto(BASE + "/dashboard/")
-    check("Utilisateur simple -> /dashboard/ : 403", r.status == 403)
-    check("Message clair d'accès refusé", "droits nécessaires" in page.locator("main").inner_text())
-    page.screenshot(path=f"{SHOTS}/{name}_dash_0_citizen_403.png")
+    check("Visiteur -> /dashboard/ : redirigé vers la connexion privée", "/dashboard/login/" in page.url)
+    page.screenshot(path=f"{SHOTS}/{name}_dash_0_public_access.png")
     for path in ["/dashboard/reports/", "/dashboard/statistics/", "/dashboard/map/", "/dashboard/users/",
-                 f"/dashboard/reports/{P['photo_report'].pk}/", f"/dashboard/reports/{P['photo_report'].pk}/photo/"]:
-        check(f"Utilisateur simple -> {path.split(str(P['photo_report'].pk))[-1] or path} : 403", page.goto(BASE + path).status == 403)
+                 f"/dashboard/reports/{P['photo_report'].pk}/"]:
+        page.goto(BASE + path)
+        check(f"Visiteur -> {path} : redirigé vers la connexion privée", "/dashboard/login/" in page.url)
     page.goto(BASE + "/")
-    check("Aucun lien « Tableau de bord » pour un utilisateur simple", page.locator("a:has-text('Tableau de bord')").count() == 0)
+    check("Aucun lien « Tableau de bord » dans l'interface publique", page.locator("a:has-text('Tableau de bord')").count() == 0)
     status = page.evaluate("fetch('/dashboard/map/data/').then(r => r.status)")
-    check("API de la carte admin -> 403 pour un utilisateur simple", status == 403)
+    check("API de la carte admin -> 401 pour un visiteur", status == 401)
     status = page.evaluate(f"fetch('/media/{P['photo_report'].photo.name}').then(r => r.status)")
     check("Fichier photo via /media/ -> 404 (aucune URL publique)", status == 404)
     status = page.evaluate("fetch('/dashboard/reports/%s/delete/', {method: 'POST'}).then(r => r.status)" % P["to_delete"].pk)
-    check("Suppression forgée par un utilisateur simple : refusée", status in (403,) and AccidentReport.objects.filter(pk=P["to_delete"].pk).exists())
+    check("Suppression forgée par un visiteur : refusée", status in (401, 403) and AccidentReport.objects.filter(pk=P["to_delete"].pk).exists())
     browser.close()
 
 
@@ -504,10 +494,12 @@ def scenario_superuser(p, name, viewport, mobile):
     page.uncheck("#id_is_active"); page.click("#access-form button[type=submit]"); page.wait_for_selector(".alert-success")
     check("Désactivation enregistrée", not User.objects.get(pk=target.pk).is_active)
     browser2, page2 = new_page(p, viewport, mobile)
-    page2.goto(f"{BASE}/login/"); page2.fill("#id_phone_number", target.phone_number[4:]); page2.click("button[type=submit]")
-    page2.wait_for_url(re.compile(r"/verify-otp/")); page2.fill(".otp-input", page2.locator("#dev-code").inner_text().strip()); page2.click("button[type=submit]")
-    page2.wait_for_selector(".alert-danger")
-    check("Compte désactivé : connexion refusée avec message clair", "désactivé" in page2.locator(".alert-danger").inner_text())
+    page2.goto(f"{BASE}/dashboard/login/")
+    page2.fill("#id_username", target.phone_number[4:])
+    page2.fill("#id_password", ADMIN_PASSWORD)
+    page2.click("#admin-login-form button[type=submit]")
+    page2.wait_for_selector("#login-error")
+    check("Compte désactivé : connexion privée refusée", "incorrect" in page2.locator("#login-error").inner_text())
     browser2.close()
 
     # Réactivation, puis le staff promu (sans droit de suppression) se connecte
@@ -517,9 +509,7 @@ def scenario_superuser(p, name, viewport, mobile):
     browser3, page3 = new_page(p, viewport, mobile)
     admin_login(page3, User.objects.get(pk=target.pk))
     check("Staff promu SANS mot de passe : connexion privée refusée", "/dashboard/login/" in page3.url and "incorrect" in page3.locator("#login-error").inner_text())
-    login(page3, User.objects.get(pk=target.pk), "/")                     # connexion citoyenne par OTP
-    check("Staff connecté par OTP : renvoyé vers la connexion privée", page3.goto(BASE + "/dashboard/").ok and "/dashboard/login/" in page3.url)
-    check("Staff connecté par OTP : aucun lien d'administration dans l'interface publique", page3.goto(BASE + "/").ok and page3.locator("a:has-text('Tableau de bord')").count() == 0 and "/dashboard/" not in page3.content())
+    check("Staff sans mot de passe : aucun accès public privilégié", page3.goto(BASE + "/").ok and page3.locator("a:has-text('Tableau de bord')").count() == 0 and "/dashboard/" not in page3.content())
     page.goto(f"{BASE}/dashboard/users/{target.pk}/")
     page.fill("#id_new_password1", ADMIN_PASSWORD); page.fill("#id_new_password2", ADMIN_PASSWORD)
     page.click("#set-password-form button[type=submit]"); page.wait_for_selector(".alert-success")
@@ -552,8 +542,6 @@ def cleanup():
             Path(report.photo.path).unlink(missing_ok=True)
     n = reports.delete()[0]
     LogEntry.objects.filter(user__in=[u.pk for u in created_users]).delete()
-    from accounts.models import OTPCode
-    OTPCode.objects.filter(phone_number__in=[u.phone_number for u in created_users]).delete()
     User.objects.filter(pk__in=[u.pk for u in created_users]).delete()
     print(f"\nNettoyage : {n} objet(s) et {len(created_users)} utilisateur(s) d'essai supprimés.")
 

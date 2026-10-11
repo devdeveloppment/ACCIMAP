@@ -38,7 +38,7 @@ class PermissionMatrixTests(PersonasTestCase):
                 response = getattr(self.client, method)(url, data or {})
                 self.assertEqual(response.status_code, status, f"{persona} {method.upper()} {url}")
                 if status == LOGIN:
-                    self.assertIn("/login/", response["Location"])
+                    self.assertIn("/dashboard/login/", response["Location"])
 
     # ------------------------------------------------------------------ consultation (permission « voir »)
     def test_pages_de_consultation(self):
@@ -207,7 +207,7 @@ class LivePermissionChangeTests(PersonasTestCase):
         User.objects.filter(pk=self.personas["staff"].pk).update(is_active=False)
         response = self.client.get(reverse("dashboard:index"))
         self.assertEqual(response.status_code, 302)
-        self.assertIn("/login/", response["Location"])
+        self.assertIn("/dashboard/login/", response["Location"])
 
     def test_liens_de_navigation_selon_le_profil(self):
         # Interface publique : AUCUN lien d'administration, pour aucun profil (même administrateur).

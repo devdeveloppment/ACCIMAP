@@ -7,14 +7,13 @@ Les citoyens signalent un accident sans créer de compte, le signalement est gé
 dans PostgreSQL/PostGIS, un administrateur le vérifie, et les signalements **vérifiés**
 apparaissent sur une carte publique (marqueurs groupés, heatmap, filtres).
 
-> Statut : phases 1 à 7 terminées (fondations, authentification OTP, signalement en 4 étapes, carte publique,
+> Statut : phases 1 à 7 terminées (fondations, signalement public en 4 étapes, carte publique,
 > accueil, espace administrateur, exports CSV/Excel/PDF, Django Admin). **À venir** : `seed_demo` et tests de
 > synthèse (phase 8), déploiement Render (phase 9).
 
 ## Fonctionnalités actuelles
 
-- Connexion par **numéro de téléphone + code OTP** (sans e-mail ni mot de passe), couche SMS interchangeable.
-- **Signalement public, sans compte, téléphone ni code OTP obligatoire** (`/report/`; `/anonymous-report/`
+- **Signalement public, sans compte ni authentification** (`/report/`; `/anonymous-report/`
   reste un alias rétrocompatible), en **4 étapes** : **1. Type** d'accident (8 cartes visuelles) et cause
   facultative parmi six facteurs distincts · **2. Lieu** (carte, position GPS trouvée
   automatiquement, quartier indiqué, repère déplaçable, confirmation) · **3. Détails** (date, heure, gravité,
@@ -53,13 +52,12 @@ Bootstrap, Leaflet, Chart.js et les icônes sont **embarqués** dans `static/ven
 ## Architecture
 
 ```
-config/      réglages, URLs racine, accueil, à propos, sonde /healthz/
-accounts/    utilisateur (téléphone), OTP, couche SMS (sms.py), rôles et permissions (roles.py)
+config/     réglages, URLs racine, pages publiques et sonde /healthz/
+accounts/    comptes administrateurs, rôles et permissions
 reports/     modèle AccidentReport, formulaires, validation des photos, zone de couverture, filtres
 maps/        carte publique : page + API GeoJSON (liste blanche des champs publics)
 dashboard/   espace administrateur : statistiques, signalements, carte, utilisateurs et permissions
 exports/     exports CSV / XLSX / PDF (phase 7)
-config/     réglages, URLs racine, pages publiques et contact SMTP
 templates/   gabarits  ·  static/ fichiers statiques  ·  scripts/ vérifications navigateur
 data/        données géographiques optionnelles (zone de couverture)
 ```
@@ -97,20 +95,13 @@ Toutes les variables sont documentées dans `.env.example`. Aucun secret ne doit
 |---|---|
 | `SECRET_KEY`, `DEBUG`, `ALLOWED_HOSTS` | Réglages Django (`DEBUG` vaut `False` par défaut) |
 | `DATABASE_URL` ou `DB_*` | Connexion PostgreSQL/PostGIS |
-| `OTP_DEV_MODE` | `True` : SMS simulé, code en console et dans un bandeau « Mode développement — SMS simulé » ; `False` : SMS réels |
-| `SMS_BACKEND`, `SMS_API_KEY`, `SMS_SENDER_ID` | `ConsoleSMSBackend` (simulation) ou `BrevoSMSBackend` (réel), clé API, Sender ID (voir ci-dessous) |
-| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USE_TLS`, `SMTP_USE_SSL`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_TIMEOUT_SECONDS` | Paramètres serveur de l'envoi du formulaire `/contact/` (Gmail : `smtp.gmail.com`, port `587`, TLS) |
-| `CONTACT_FROM_EMAIL`, `CONTACT_RECEIVER_EMAIL` | Adresse expéditrice authentifiée et adresse de réception (par défaut `atou1926@gmail.com`) |
-| `CONTACT_RATE_LIMIT`, `CONTACT_RATE_WINDOW_SECONDS` | Limitation anti-spam des envois par adresse IP (3 par heure par défaut) |
 | `PUBLIC_MAP_SHOW_DESCRIPTION` | Publier la description libre dans les popups publics (`False` par défaut) |
 | `ADMIN_MAP_MAX_FEATURES` | Nombre maximal de points sur la carte administrateur (10000 par défaut) |
 | `COVERAGE_ZONE_GEOJSON`, `COVERAGE_ZONE_IS_OFFICIAL`, `COVERAGE_ZONE_NAME` | Zone de couverture (voir `data/README.md`) |
 | `MEDIA_STORAGE_BACKEND` | Stockage des photos (disque local par défaut) |
 
-Le formulaire de contact ne rapporte une réussite que lorsque le backend SMTP confirme l'envoi.
-Configurez les paramètres SMTP dans les variables d'environnement du serveur (ou dans `.env` en local,
-qui est ignoré par Git) ; n'ajoutez jamais le mot de passe SMTP à `.env.example`, au frontend ou au dépôt.
-Pour Gmail, créez et utilisez un mot de passe d'application après avoir activé la validation en deux étapes.
+La page Contact ouvre une conversation WhatsApp avec l'équipe ACCIMAP au numéro togolais
+`+228 91 54 03 86`. Aucun envoi d'e-mail ni identifiant SMTP n'est requis.
 
 ## Tests
 
@@ -121,21 +112,18 @@ python manage.py test            # tests unitaires et d'intégration (PostGIS re
 
 Vérifications dans un vrai navigateur (Chromium, formats smartphone et ordinateur). Outils de développement
 (`pypdf` pour lire les PDF des tests, `playwright`) : `pip install -r requirements-dev.txt && playwright install chromium`,
-puis, serveur lancé (`OTP_DEV_MODE=True`) :
+puis serveur lancé :
 
 ```bash
-python scripts/e2e_auth_flow.py      # connexion OTP, déconnexion, responsive
 python scripts/e2e_report_flow.py    # parcours en 4 étapes : identifié/anonyme, GPS, hors zone, photo EXIF, sans JavaScript
 python scripts/e2e_map_flow.py       # carte publique : visibilité, confidentialité, clusters, heatmap, filtres
-# Espace administrateur : le staff et le superutilisateur se connectent par l'espace privé (identifiant + mot de
-# passe) ; les profils citoyens, eux, par OTP et plusieurs fois. Le serveur doit donc être lancé SANS délai
-# anti-renvoi d'OTP ; un format à la fois (les scénarios modifient des données) :
-OTP_RESEND_DELAY_SECONDS=0 OTP_MAX_REQUESTS_PER_HOUR=100 python manage.py runserver 8000
+# Un format à la fois (les scénarios modifient des données) :
+python manage.py runserver 8000
 E2E_VIEWPORT=desktop python scripts/e2e_dashboard_flow.py
 E2E_VIEWPORT=mobile  python scripts/e2e_dashboard_flow.py
 E2E_VIEWPORT=desktop python scripts/e2e_exports_admin_flow.py   # exports téléchargés, filtres, Django Admin
 E2E_VIEWPORT=mobile  python scripts/e2e_exports_admin_flow.py
-# Parcours complet (phase 8) : citoyen OTP -> signalement -> validation -> carte publique -> statistiques -> exports
+# Parcours complet : signalement anonyme -> validation -> carte publique -> statistiques -> exports
 python scripts/e2e_full_journey.py
 # Services externes RÉELS (phase 9) : tuiles OpenStreetMap et 2-3 appels Nominatim. Usage ponctuel uniquement.
 python scripts/check_external_services.py      # SKIP_NOMINATIM=1 pour ne tester que les tuiles
@@ -143,47 +131,22 @@ python scripts/check_external_services.py      # SKIP_NOMINATIM=1 pour ne tester
 
 Ces scripts créent leurs propres données de test et les suppriment à la fin.
 
-## Authentification par OTP et SMS
+## Accès public et administration
 
-Le cycle OTP est toujours RÉEL : code généré par `secrets`, seule son empreinte HMAC est stockée, expiration,
-tentatives maximales, délai de renvoi, plafond horaire, validation et connexion (`accounts/otp.py`). Seul le
-**transport** du SMS change selon le mode, choisi uniquement par les variables d'environnement :
-
-| | Mode simulation (développement, soutenance) | Mode production |
-|---|---|---|
-| Variables | `SMS_BACKEND=accounts.sms.ConsoleSMSBackend`, `OTP_DEV_MODE=True` | `SMS_BACKEND=accounts.sms.BrevoSMSBackend`, `OTP_DEV_MODE=False`, `SMS_API_KEY`, `SMS_SENDER_ID` |
-| SMS | simulé : aucun SMS réel, aucun crédit, aucune clé, hors ligne | réel, via l'API officielle **Brevo** (Togo +228) |
-| Code | console du serveur (encadré « SMS simulé », numéro masqué) et bandeau « Mode développement — SMS simulé » sur la page de saisie | uniquement sur le téléphone ; jamais affiché ni journalisé |
-| Prérequis | aucun | compte Brevo, **crédits SMS**, **Sender ID approuvé pour le Togo**, clé API (jamais dans Git) |
-
-Avec `OTP_DEV_MODE=True`, aucun SMS réel ne peut partir, quel que soit `SMS_BACKEND`. Avec `OTP_DEV_MODE=False`, le
-backend simulé est refusé et le code n'apparaît nulle part : si l'envoi échoue, l'utilisateur voit « Le SMS n'a pas
-pu être envoyé » et aucun code n'est enregistré. `python manage.py check` signale les configurations incohérentes
-(backend inexistant, Brevo sans clé, fournisseur réel ignoré en simulation, simulation avec `DEBUG=False`).
-
-Le mode simulation permet à quiconque de se connecter avec n'importe quel numéro (le code s'affiche) : il est réservé
-aux tests et à la démonstration, jamais à une utilisation réelle. L'espace administrateur n'en dépend pas (mot de passe).
-
-```bash
-python manage.py sms_test --account              # simulation : configuration ; production : clé + crédits Brevo
-python manage.py sms_test +228XXXXXXXX           # cycle complet avec le fournisseur configuré
-python manage.py sms_test --brevo +228XXXXXXXX   # force un VRAI SMS Brevo (1 crédit), code saisi au clavier
-```
-
-Autre fournisseur : une classe héritant de `BaseSMSBackend` (mode d'emploi en tête de `accounts/sms.py`).
+Les pages publiques et le signalement d'accident sont accessibles sans compte ni connexion. L'authentification
+reste réservée à l'espace privé des administrateurs (`/dashboard/login/`), protégé par identifiant et mot de passe.
 
 ## Espace d'administration privé
 
 L'administration est un **espace privé, séparé de l'interface citoyenne** :
 
-- **Interface publique** (citoyens) : accueil, carte, à propos, signalement, connexion par **numéro + code OTP**.
-  Elle ne contient **aucun** lien ni élément d'administration, quel que soit le profil connecté.
+- **Interface publique** : accueil, carte, à propos, signalement anonyme et contact. Aucun compte n'est requis.
 - **Espace privé** : `/dashboard/login/`, connexion par **identifiant administrateur + mot de passe**. L'identifiant
   est le numéro du compte (champ identifiant de Django, sans changement de modèle). Gabarit propre (en-tête
   « Administration », sans barre citoyenne) avec vue globale : signalements, statistiques, carte, validation/rejet,
   exports, utilisateurs, historique (journal), administration avancée (Django Admin).
-- **Règle serveur** (chaque vue, `accounts/decorators.py`) : un citoyen reçoit **403** ; un visiteur, ou un compte
-  staff connecté par l'OTP citoyen, est renvoyé vers la connexion privée (**401** pour les API) ; à l'intérieur,
+- **Règle serveur** (chaque vue, `accounts/decorators.py`) : un visiteur ou un utilisateur simple est renvoyé vers la
+  connexion privée (**401** pour les API) ; à l'intérieur,
   les permissions (voir, modifier, supprimer, superutilisateur) s'appliquent comme avant. La session administrateur
   est marquée et liée à l'utilisateur, et expire après `ADMIN_SESSION_AGE` secondes (8 h par défaut).
 - Le **Django Admin** (`/admin/`) exige la même session administrateur et utilise la même page de connexion.
@@ -215,8 +178,8 @@ Trois profils, fondés sur les permissions Django (`accounts/roles.py`) et appli
   réglables par un superutilisateur depuis `/dashboard/users/<id>/` (par défaut : toutes accordées).
 - Un superutilisateur **ne peut ni se désactiver ni réduire ses propres droits** (anti-verrouillage).
 - Une désactivation ou un changement de droits s'applique **immédiatement**, sur les sessions déjà ouvertes.
-- Pour donner un accès, la personne doit d'abord s'être connectée une fois par OTP (création du compte) ; le
-  superutilisateur lui attribue ensuite un niveau staff **et** un mot de passe d'administration.
+- Pour donner un accès, le superutilisateur crée le compte, lui attribue un niveau staff et définit un mot de passe
+  d'administration.
 - Les actions sensibles (statut, modification, suppression, changement d'accès) sont tracées dans l'historique de
   Django (`LogEntry`), sans numéro de téléphone complet.
 - Dans l'espace staff, un déclarant identifié n'apparaît que sous forme **masquée** (`+228****56`) ; un
@@ -234,7 +197,7 @@ Trois profils, fondés sur les permissions Django (`accounts/roles.py`) et appli
 - **Django Admin** : les relations vers l'utilisateur ne sont pas des champs du formulaire (déclarant et personne
   ayant traité apparaissent masqués, y compris dans l'historique) ; la photo passe par la vue protégée ; l'ajout de
   signalements est désactivé ; les comptes se désactivent plutôt qu'ils ne se suppriment ; le journal est en lecture
-  seule. Accès après connexion à l'espace privé (`/dashboard/login/`), jamais par l'OTP citoyen.
+  seule. Accès après connexion à l'espace privé (`/dashboard/login/`).
 
 ## Carte publique : ce qui est visible
 
@@ -278,9 +241,9 @@ concentration de signalements* ; ce n'est pas une preuve officielle qu'une zone 
 - **Position exacte** : une fois le signalement vérifié, ses coordonnées sont publiques à 6 décimales (≈ 11 cm).
 - **Administrateurs** : ils voient l'intégralité des signalements (description, photo, coordonnées) et, selon leurs
   droits, la base de données.
-- **Numéros de téléphone** : stockés en clair en base (nécessaires à l'envoi des SMS), sans chiffrement applicatif.
-- **Pas de limitation par IP** sur l'envoi de signalements anonymes (spam possible) ; les envois d'OTP sont limités
-  par numéro, pas par IP.
+- **Numéros de téléphone des comptes d'administration** : stockés en clair en base et masqués dans les vues qui ne
+  nécessitent pas leur affichage complet.
+- **Pas de limitation par IP** sur l'envoi de signalements anonymes (spam possible).
 
 ## Limites connues du prototype
 
@@ -291,9 +254,7 @@ concentration de signalements* ; ce n'est pas une preuve officielle qu'une zone 
   (politique d'utilisation d'OSM) ; prévoir un fournisseur dédié au-delà. Attribution affichée sur la carte.
 - **Photos** : stockées sur disque local. Sur un hébergement à disque éphémère (Render, offre gratuite), elles sont
   perdues à chaque redéploiement. L'architecture permet de changer de stockage via `MEDIA_STORAGE_BACKEND`.
-- **SMS** : prototype en **SMS simulé** ; le fournisseur réel Brevo est intégré mais exige une clé API, des crédits
-  SMS payants et un Sender ID approuvé pour le Togo (aucun SMS réel envoyé à ce jour). Les administrateurs ne dépendent pas des SMS : ils se
-  connectent par l'espace privé (identifiant + mot de passe), sans second facteur.
+- **Authentification des administrateurs** : l'espace privé utilise identifiant et mot de passe, sans second facteur.
 - **Permissions** : au niveau du modèle (voir, modifier, supprimer) et non par signalement ; pas de journal d'audit
   consultable dans le tableau de bord (l'historique est visible dans le Django Admin, configuré en phase 7).
 - Photos HEIC non acceptées (JPEG, PNG et WebP uniquement) ; carte publique limitée à 5000 points.

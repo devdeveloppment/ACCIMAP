@@ -1,16 +1,14 @@
 """
 Contrôle d'accès à l'espace d'administration PRIVÉ.
 
-Deux authentifications distinctes coexistent :
-  * citoyenne : numéro + code OTP (accounts/views.py) -> interface publique uniquement ;
-  * administrateur : identifiant + mot de passe (dashboard/auth.py) -> espace privé.
+Les signalements publics ne nécessitent aucune authentification. L'espace privé
+est réservé aux administrateurs connectés par identifiant et mot de passe.
 
 Une session ne vaut « administrateur » que si elle a été ouverte par la connexion de l'espace privé : elle porte alors
-la marque ADMIN_SESSION_KEY, liée à l'identifiant de l'utilisateur. Un compte staff connecté par OTP n'y a donc PAS accès.
+la marque ADMIN_SESSION_KEY, liée à l'identifiant de l'utilisateur.
 
 Règles appliquées côté serveur à chaque requête :
-  * citoyen connecté (compte non staff)                 -> 403, jamais de redirection vers l'administration ;
-  * visiteur, ou staff sans session administrateur      -> page de connexion de l'espace privé (401 pour les API) ;
+  * visiteur, utilisateur simple ou staff sans session administrateur -> page de connexion privée (401 pour les API) ;
   * session administrateur sans la permission demandée  -> 403.
 """
 from functools import wraps

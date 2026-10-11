@@ -1,7 +1,7 @@
 """
-Tests de SYNTHÈSE (phase 8) : les modules enchaînés par leurs vraies vues HTTP, sans raccourci de connexion.
+Tests de SYNTHÈSE : les modules enchaînés par leurs vraies vues HTTP.
 
-    citoyen -> OTP (accounts) -> signalement (reports) -> connexion privée par mot de passe (dashboard)
+    visiteur anonyme -> signalement (reports) -> connexion privée par mot de passe (dashboard)
     -> validation -> carte publique (maps) -> statistiques (dashboard) -> exports CSV / Excel / PDF (exports)
 
 À chaque étape : le résultat attendu, les permissions et l'absence de fuite de données personnelles.
@@ -21,8 +21,8 @@ from reports.choices import ReportStatus
 from reports.models import AccidentReport
 from reports.tests.helpers import valid_report_data
 
-CITIZEN_PHONE = "90112233"
 CITIZEN_FULL = "+22890112233"
+CITIZEN_PHONE = "90112233"
 ADMIN_PHONE = "90445566"
 ADMIN_PASSWORD = "Synthese-Accimap-2026!"
 PRIVATE_TEXT = "Appeler Kossi au 90112233, plaque TG-4321-AB"
@@ -38,14 +38,6 @@ def make_admin(phone, role=ROLE_SUPERUSER, password=ADMIN_PASSWORD, **options):
     return user
 
 
-def otp_login(client, phone, next_url="/report/"):
-    """Connexion citoyenne réelle : numéro -> code (affiché en mode dev) -> vérification."""
-    client.get(next_url)
-    client.post("/login/", {"phone_number": phone, "next": next_url})
-    code = client.session["otp_dev_code"]
-    return client.post("/verify-otp/", {"code": code})
-
-
 def admin_login(client, phone=ADMIN_PHONE, password=ADMIN_PASSWORD):
     return client.post(reverse("dashboard:login"), {"username": phone, "password": password})
 
@@ -56,7 +48,7 @@ def public_features(client=None):
     return response, response.json()
 
 
-@override_settings(OTP_DEV_MODE=True, OTP_RESEND_DELAY_SECONDS=0, REVERSE_GEOCODING_ENABLED=False)
+@override_settings(REVERSE_GEOCODING_ENABLED=False)
 class FullJourneyTests(TestCase):
     """Le parcours complet, du signalement public jusqu'aux exports."""
 
@@ -232,7 +224,7 @@ class FullJourneyTests(TestCase):
         self.assertEqual(AccidentReport.objects.count(), 0)
 
 
-@override_settings(OTP_DEV_MODE=True, OTP_RESEND_DELAY_SECONDS=0, REVERSE_GEOCODING_ENABLED=False)
+@override_settings(REVERSE_GEOCODING_ENABLED=False)
 class CrossModulePermissionTests(TestCase):
     """Permissions vérifiées à la jonction des modules, avec de vraies connexions."""
 
@@ -260,11 +252,10 @@ class CrossModulePermissionTests(TestCase):
         self.assertEqual(export.status_code, 200)
         self.assertNotIn("+228", export.content.decode("utf-8-sig"))
 
-    def test_staff_connecte_par_otp_n_a_pas_acces_a_l_espace_prive(self):
-        """Un compte staff qui passe par l'OTP citoyen reste un simple citoyen."""
-        make_admin("90770002", ROLE_SUPERUSER)
+    def test_staff_sans_session_admin_n_a_pas_acces_a_l_espace_prive(self):
+        staff = make_admin("90770002", ROLE_SUPERUSER)
         client = Client()
-        otp_login(client, "90770002", next_url="/")
+        client.force_login(staff)
         self.assertTrue(client.session.get("_auth_user_id"))
         self.assertEqual(client.get(reverse("dashboard:index")).status_code, 302)
         self.assertEqual(client.get(reverse("exports:pdf")).status_code, 302)
@@ -274,10 +265,10 @@ class CrossModulePermissionTests(TestCase):
         self.report.refresh_from_db()
         self.assertEqual(self.report.status, ReportStatus.PENDING)
 
-    def test_citoyen_sans_mot_de_passe_ne_peut_pas_ouvrir_l_espace_prive(self):
-        otp_login(Client(), CITIZEN_PHONE, next_url="/")
+    def test_utilisateur_simple_sans_mot_de_passe_ne_peut_pas_ouvrir_l_espace_prive(self):
+        user = User.objects.create_user("90112233")
         client = Client()
-        response = admin_login(client, CITIZEN_PHONE, "nimporte-quoi")
+        response = admin_login(client, user.phone_number, "nimporte-quoi")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(client.get(reverse("dashboard:index")).status_code, 302)
 

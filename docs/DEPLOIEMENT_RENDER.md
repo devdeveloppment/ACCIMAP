@@ -31,7 +31,6 @@ dans le tableau de bord Render.
 | `DEBUG` | `False` | HTTPS forcé, cookies sécurisés, HSTS |
 | `DATABASE_URL` | fournie par la base `accimap-db` | connexion interne, base inaccessible depuis Internet |
 | `WEB_CONCURRENCY` | `2` | processus gunicorn |
-| `OTP_DEV_MODE` / `SMS_BACKEND` | `True` / `ConsoleSMSBackend` | **SMS simulé** (prototype, soutenance) : le code s'affiche à l'écran |
 | `SEED_DEMO` | `False` | `True` = 60 signalements de démonstration créés au démarrage (une seule fois) |
 
 Un domaine personnalisé s'ajoute dans *Settings > Custom Domains* ; ajouter alors `ALLOWED_HOSTS` et
@@ -53,8 +52,6 @@ Un domaine personnalisé s'ajoute dans *Settings > Custom Domains* ; ajouter alo
 - **Photos** : le disque d'un service Render est effacé à chaque redéploiement ou redémarrage. Les photos jointes aux
   signalements sont donc perdues ; les signalements eux-mêmes (base de données) sont conservés. Pour les garder :
   disque persistant Render (offre payante, monté sur `/app/media`) ou stockage externe via `MEDIA_STORAGE_BACKEND`.
-- **SMS** : simulés. Pour de vrais SMS : `OTP_DEV_MODE=False`, `SMS_BACKEND=accounts.sms.BrevoSMSBackend`,
-  `SMS_API_KEY` (clé Brevo) et `SMS_SENDER_ID` (Sender ID approuvé pour le Togo), crédits SMS Brevo.
 
 ## 5. Opérations courantes
 

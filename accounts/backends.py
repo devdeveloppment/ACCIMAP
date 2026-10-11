@@ -7,9 +7,8 @@ from .phone import normalize_phone
 
 class PhoneModelBackend(ModelBackend):
     """
-    Utilisé pour la connexion par mot de passe (administrateurs sur /admin/).
+    Utilisé pour la connexion par mot de passe des administrateurs.
     Normalise le numéro (« 90123456 » -> « +22890123456 ») avant de comparer.
-    La connexion des citoyens par OTP passe par accounts.otp.verify_otp().
     """
 
     def authenticate(self, request, username=None, password=None, **kwargs):

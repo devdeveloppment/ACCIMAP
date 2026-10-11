@@ -2,24 +2,23 @@
 Vérification de bout en bout du PARCOURS COMPLET ACCIMAP (phase 8) dans un vrai navigateur (Chromium via Playwright),
 enchaîné sans raccourci, en format smartphone puis ordinateur :
 
-    1. Citoyen : accueil -> « Signaler » -> connexion OTP (numéro -> code -> vérification)
+    1. Visiteur : accueil -> « Signaler » -> formulaire anonyme
     2. Signalement en 5 étapes (type, cause, lieu GPS, détails, récapitulatif) -> enregistré « En attente »
     3. Absent de la carte publique tant qu'il n'est pas validé
     4. Administrateur : connexion PRIVÉE (identifiant + mot de passe) -> fiche -> « Vérifié »
     5. Apparition sur la carte publique (compteur, repère, API sans donnée personnelle)
     6. Statistiques mises à jour (indicateurs et graphiques)
     7. Exports Excel et PDF téléchargés depuis l'interface, contenu contrôlé
-    8. Permissions : le citoyen n'accède pas à l'espace privé
+    8. Permissions : le visiteur n'accède pas à l'espace privé
 
 Prérequis : pip install -r requirements-dev.txt && playwright install chromium
-Utilisation : python manage.py runserver 8000   (OTP_DEV_MODE=True)
+Utilisation : python manage.py runserver 8000
               E2E_VIEWPORT=mobile|desktop python scripts/e2e_full_journey.py     (défaut : les deux)
 Les tuiles OpenStreetMap et le service de quartier sont simulés. Toutes les données créées sont supprimées à la fin.
 """
 import io
 import json
 import os
-import random
 import re
 import sys
 import traceback
@@ -37,7 +36,7 @@ from PIL import Image  # noqa: E402
 from playwright.sync_api import sync_playwright  # noqa: E402
 from pypdf import PdfReader  # noqa: E402
 
-from accounts.models import OTPCode, User  # noqa: E402
+from accounts.models import User  # noqa: E402
 from accounts.roles import ROLE_SUPERUSER, set_role  # noqa: E402
 from reports.models import AccidentReport  # noqa: E402
 
@@ -53,19 +52,13 @@ VIEWPORTS = {
     "mobile": ({"width": 390, "height": 844}, True),
     "desktop": ({"width": 1366, "height": 900}, False),
 }
-results, created_refs, created_phones = [], [], []
+results, created_refs = [], []
 
 
 def check(label, cond, detail=""):
     results.append(bool(cond))
     print(("  PASS " if cond else "  FAIL ") + label + (f"  [{detail}]" if detail and not cond else ""))
     return bool(cond)
-
-
-def fresh_phone():
-    n = "9" + "".join(random.choice("0123456789") for _ in range(7))
-    created_phones.append("+228" + n)
-    return n
 
 
 def tile_png():
@@ -137,37 +130,18 @@ def journey(p, name, viewport, mobile):
     print(f"\n=== [{name}] Parcours complet citoyen -> administration -> carte -> statistiques -> exports")
     admin = make_admin()
     browser = p.chromium.launch()
-    citizen_ctx, page = new_context(browser, viewport, mobile)
+    public_ctx, page = new_context(browser, viewport, mobile)
 
     # ---- Carte publique : compteur de départ
     page.goto(BASE + "/map/")
     public_before = map_ready(page)
 
-    # ---- 1. Citoyen : connexion OTP
-    print("-- 1. Authentification OTP")
+    # ---- 1. Signalement public, sans compte
+    print("-- 1. Accès public")
     page.goto(BASE + "/")
     page.click(".hero a.btn-accent")
-    page.wait_for_url(re.compile(r"/login/\?next="))
-    check("Signaler sans être connecté -> page de connexion", "/login/" in page.url)
-    phone = fresh_phone()
-    page.fill("#id_phone_number", phone)
-    page.click("button[type=submit]")
-    page.wait_for_url(re.compile(r"/verify-otp/"))
-    check("Numéro accepté -> saisie du code", "/verify-otp/" in page.url)
-    otp = OTPCode.objects.filter(phone_number="+228" + phone).first()
-    check("BASE : code OTP créé, stocké sous forme d'empreinte uniquement",
-          otp and not otp.is_used and len(otp.code_hash) == 64 and page.locator("#dev-code").inner_text().strip() not in otp.code_hash)
-    page.fill(".otp-input", "000000" if page.locator("#dev-code").inner_text().strip() != "000000" else "111111")
-    page.click("button[type=submit]")
-    page.wait_for_load_state("networkidle")
-    check("Code erroné -> refusé, reste sur la vérification", "/verify-otp/" in page.url and "incorrect" in page.inner_text("body"))
-    page.fill(".otp-input", page.locator("#dev-code").inner_text().strip())
-    page.click("button[type=submit]")
     page.wait_for_url(re.compile(r"/report/"))
-    citizen = User.objects.get(phone_number="+228" + phone)
-    check("Code correct -> connecté et renvoyé vers le signalement", page.url.split("#")[0].endswith("/report/"))
-    check("BASE : compte citoyen créé, sans mot de passe ni accès staff",
-          not citizen.is_staff and not citizen.has_usable_password())
+    check("Le signalement s'ouvre directement sans compte", page.locator("#report-form").is_visible())
 
     # ---- 2. Signalement en 5 étapes
     print("-- 2. Signalement")
@@ -197,20 +171,20 @@ def journey(p, name, viewport, mobile):
     created_refs.append(reference)
     check("Confirmation affichée avec la référence", re.fullmatch(r"ACC-\d{4}-\d{6}", reference), reference)
     report = AccidentReport.objects.get(reference=reference)
-    check("BASE : rattaché au citoyen, statut « En attente »", report.user_id == citizen.pk and report.status == "PENDING")
+    check("BASE : signalement anonyme, statut « En attente »", report.user_id is None and report.status == "PENDING")
     check("BASE : PointField SRID 4326 = coordonnées GPS reçues (non modifiées)",
           report.location.srid == 4326 and abs(report.location.y - GPS["latitude"]) < 1e-6 and abs(report.location.x - GPS["longitude"]) < 1e-6,
           f"{report.location.y},{report.location.x}")
     check("BASE : détails enregistrés (piéton, grave, 2 véhicules, 2 blessés)",
           (report.accident_type, report.severity, report.vehicle_count, report.injured_count) == ("PEDESTRIAN", "SEVERE", 2, 2))
 
-    # ---- 3. Pas encore public ; le citoyen n'accède pas à l'espace privé
+    # ---- 3. Pas encore public ; le visiteur n'accède pas à l'espace privé
     print("-- 3. Avant validation")
     page.goto(BASE + "/map/")
     check("Carte publique : signalement EN ATTENTE non affiché", map_ready(page) == public_before)
     for path in ("/dashboard/", "/dashboard/statistics/", "/dashboard/exports/"):
-        response = page.goto(BASE + path)
-        check(f"Citoyen connecté par OTP : {path} refusé (403)", response.status == 403, str(response.status))
+        page.goto(BASE + path)
+        check(f"Visiteur : {path} redirigé vers la connexion privée", "/dashboard/login/" in page.url)
 
     # ---- 4. Administrateur : connexion privée et validation
     print("-- 4. Traitement administratif")
@@ -263,7 +237,7 @@ def journey(p, name, viewport, mobile):
     coords = [f["geometry"]["coordinates"] for f in api.json()["features"]]
     check("API publique : point aux coordonnées enregistrées", [round(GPS["longitude"], 6), round(GPS["latitude"], 6)] in coords)
     check("API publique : aucune donnée personnelle ni interne",
-          not any(s in body for s in (phone, "Afi", "TG-7788-AC", "police municipale", reference, str(report.pk))))
+          not any(s in body for s in ("Afi", "TG-7788-AC", "police municipale", reference, str(report.pk))))
     check("Carte publique : aucune erreur JavaScript ni ressource manquante", not page.errors, "; ".join(page.errors[:3]))
     page.screenshot(path=f"{SHOTS}/{name}_full_3_public_map.png")
 
@@ -295,21 +269,19 @@ def journey(p, name, viewport, mobile):
           str(line))
     check("Excel : seulement des signalements vérifiés (filtre respecté)", all(r[5] == "Vérifié" for r in rows[1:] if r[0]))
     flat = json.dumps([[str(c) for c in r] for r in rows])
-    check("Excel : aucun numéro de téléphone ni note interne", phone not in flat and "+228" not in flat and "police municipale" not in flat)
+    check("Excel : aucun numéro de téléphone ni note interne", "+228" not in flat and "police municipale" not in flat)
     filename, data = download(admin_page, "#download-pdf")
     text = "".join(pg.extract_text() for pg in PdfReader(io.BytesIO(data)).pages)
     check("PDF : fichier .pdf téléchargé et lisible", filename.endswith(".pdf") and data[:4] == b"%PDF", filename)
     check("PDF : contient la référence du signalement", reference in re.sub(r"\s+", "", text))
-    check("PDF : aucun numéro de téléphone", phone not in re.sub(r"\s+", "", text) and "+228" not in text)
+    check("PDF : aucun numéro de téléphone", "+228" not in text)
 
     # ---- 8. Déconnexions
-    citizen_ctx.close(); admin_ctx.close(); browser.close()
+    public_ctx.close(); admin_ctx.close(); browser.close()
 
 
 def cleanup():
     AccidentReport.objects.filter(reference__in=created_refs).delete()
-    User.objects.filter(phone_number__in=created_phones).delete()
-    OTPCode.objects.filter(phone_number__in=created_phones).delete()
 
 
 def main():

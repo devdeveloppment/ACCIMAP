@@ -2,8 +2,7 @@
 Authentification de l'espace d'administration PRIVÉ : identifiant administrateur + mot de passe.
 
   * L'identifiant est le numéro du compte (champ identifiant de Django), accepté sous tout format.
-  * Seuls les comptes staff actifs disposant d'un mot de passe peuvent se connecter ; un citoyen (OTP uniquement)
-    n'a pas de mot de passe et ne peut donc jamais ouvrir cet espace.
+  * Seuls les comptes staff actifs disposant d'un mot de passe peuvent se connecter.
   * Message d'erreur unique, quel que soit le motif (pas de divulgation de l'existence d'un compte).
   * Blocage temporaire après ADMIN_LOGIN_MAX_ATTEMPTS échecs pour un même identifiant.
 """

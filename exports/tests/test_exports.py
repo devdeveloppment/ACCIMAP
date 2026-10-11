@@ -337,7 +337,7 @@ class ExportPermissionTests(ExportDataMixin, PersonasTestCase):
                     response = self.client.get(reverse(name))
                     self.assertEqual(response.status_code, status)
                     if status == 302:
-                        self.assertIn("/login/", response["Location"])
+                        self.assertIn("/dashboard/login/", response["Location"])
 
     def test_refus_sans_aucune_donnee(self):
         for persona in ("anonymous", "citizen", "staff_no_view"):

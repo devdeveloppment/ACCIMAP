@@ -6,9 +6,8 @@ Vérifie : téléchargements réels depuis l'interface, respect des filtres acti
 neutralisation des formules, permissions (utilisateur / staff / superutilisateur), Django Admin (actions, accès).
 
 Prérequis : pip install -r requirements-dev.txt && playwright install chromium
-Utilisation : OTP_RESEND_DELAY_SECONDS=0 python manage.py runserver 8000
+Utilisation : python manage.py runserver 8000
               E2E_VIEWPORT=mobile|desktop python scripts/e2e_exports_admin_flow.py
-(les profils se reconnectent plusieurs fois : le délai anti-renvoi de 60 s doit être désactivé pour CE serveur de test)
 Toutes les données de test sont supprimées à la fin.
 """
 import csv
@@ -36,7 +35,7 @@ from PIL import Image  # noqa: E402
 from playwright.sync_api import sync_playwright  # noqa: E402
 from pypdf import PdfReader  # noqa: E402
 
-from accounts.models import OTPCode, User  # noqa: E402
+from accounts.models import User  # noqa: E402
 from accounts.roles import ROLE_STAFF, ROLE_SUPERUSER, set_role  # noqa: E402
 from reports.choices import AccidentType, Severity  # noqa: E402
 from reports.models import AccidentReport  # noqa: E402
@@ -118,20 +117,11 @@ def new_page(p, viewport, mobile, accept_downloads=True):
     return browser, page
 
 
-def login(page, user, next_path="/dashboard/exports/"):
-    page.goto(f"{BASE}/login/?next={next_path}")
-    page.fill("#id_phone_number", user.phone_number[4:])
-    page.click("button[type=submit]")
-    page.wait_for_url(re.compile(r"/verify-otp/"))
-    page.fill(".otp-input", page.locator("#dev-code").inner_text().strip())
-    page.click("button[type=submit]")
-    page.wait_for_load_state("networkidle")
-
 ADMIN_PASSWORD = "E2E-Admin-Phrase-2026"
 
 
 def admin_login(page, user, next_path="/dashboard/exports/"):
-    """Connexion par l'ESPACE PRIVÉ : identifiant administrateur + mot de passe (jamais par l'OTP citoyen)."""
+    """Connexion privée de l'administration par identifiant et mot de passe."""
     page.goto(f"{BASE}/dashboard/login/?next={next_path}")
     page.fill("#id_username", user.phone_number[4:])
     page.fill("#id_password", ADMIN_PASSWORD)
@@ -244,13 +234,11 @@ def scenario_export_permissions(p, name, viewport, mobile):
     browser, page = new_page(p, viewport, mobile)
     for path in ("/dashboard/exports/", "/dashboard/exports/csv/"):
         r = page.goto(BASE + path)
-        check(f"Visiteur -> {path} : redirigé vers la connexion", "/login/" in page.url)
-    login(page, P["citizen"], "/")
-    for path in ("/dashboard/exports/", "/dashboard/exports/csv/", "/dashboard/exports/xlsx/", "/dashboard/exports/pdf/"):
-        status = page.evaluate(f"fetch('{path}').then(r => r.status)")
-        check(f"Utilisateur simple -> {path} : 403", status == 403)
+        check(f"Visiteur -> {path} : redirigé vers la connexion privée", "/dashboard/login/" in page.url)
+    status = page.evaluate("fetch('/dashboard/exports/csv/').then(r => r.status)")
+    check("API d'export -> 401 pour un visiteur", status == 401)
     body = page.evaluate("fetch('/dashboard/exports/csv/').then(r => r.text())")
-    check("Utilisateur simple : aucune donnée dans la réponse refusée", AccidentReport.objects.first().reference not in body)
+    check("Visiteur : aucune donnée dans la réponse refusée", AccidentReport.objects.first().reference not in body)
     browser.close()
 
 
@@ -308,7 +296,6 @@ def cleanup():
     reports = AccidentReport.objects.filter(pk__in=created_ids)
     n = reports.delete()[0]
     LogEntry.objects.filter(user__in=[u.pk for u in created_users]).delete()
-    OTPCode.objects.filter(phone_number__in=[u.phone_number for u in created_users]).delete()
     User.objects.filter(pk__in=[u.pk for u in created_users]).delete()
     print(f"\nNettoyage : {n} objet(s) et {len(created_users)} utilisateur(s) d'essai supprimés.")
 

@@ -13,75 +13,29 @@
 <section class="container contact-section py-4 py-lg-5">
   <div class="row g-4 g-lg-5 align-items-start">
     <div class="col-lg-7">
-      <div class="card contact-form-card">
-        <div class="card-body p-4 p-md-5">
-          <div class="mb-4">
-            <span class="contact-eyebrow">Écrivez-nous</span>
-            <h2 class="h3 mt-2 mb-2">Envoyer un message</h2>
-            <p class="text-muted mb-0">Les champs marqués d'un astérisque sont obligatoires.</p>
-          </div>
-          <form method="post" action="{% url 'contact' %}" novalidate>
-            {% csrf_token %}
-            {% if form.non_field_errors %}
-              <div class="alert alert-danger" role="alert" aria-live="assertive">
-                {% for error in form.non_field_errors %}<p class="mb-0">{{ error }}</p>{% endfor %}
-              </div>
-            {% endif %}
-            <div class="contact-honeypot" aria-hidden="true">
-              {{ form.website }}
-            </div>
-            <div class="mb-3">
-              <label for="{{ form.name.id_for_label }}" class="form-label">{{ form.name.label }} <span aria-hidden="true">*</span></label>
-              {{ form.name }}
-              {% for error in form.name.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
-            </div>
-            <div class="mb-3">
-              <label for="{{ form.email.id_for_label }}" class="form-label">{{ form.email.label }} <span aria-hidden="true">*</span></label>
-              {{ form.email }}
-              {% for error in form.email.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
-            </div>
-            <div class="mb-3">
-              <label for="{{ form.subject.id_for_label }}" class="form-label">{{ form.subject.label }} <span aria-hidden="true">*</span></label>
-              {{ form.subject }}
-              {% for error in form.subject.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
-            </div>
-            <div class="mb-4">
-              <label for="{{ form.message.id_for_label }}" class="form-label">{{ form.message.label }} <span aria-hidden="true">*</span></label>
-              {{ form.message }}
-              {% for error in form.message.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
-            </div>
-            <p class="small text-muted d-flex align-items-start gap-2">
-              {% icon "lock" size=17 css="mt-1 flex-shrink-0" %}
-              <span>Vos coordonnées servent uniquement à répondre à votre demande et ne sont pas publiées.</span>
-            </p>
-            <button type="submit" class="btn btn-accent btn-lg w-100 contact-submit">
-              {% icon "send" size=19 %} Envoyer le message
-            </button>
-          </form>
+      <div class="contact-aside page-banner rounded-4 p-4 p-md-5">
+        <span class="contact-eyebrow contact-eyebrow-light">Restons en contact</span>
+        <h2 class="h3 mt-2 mb-3">Écrivez-nous sur WhatsApp</h2>
+        <p class="contact-aside-copy mb-4">Pour toute question, remarque ou proposition, contactez directement l'équipe ACCIMAP sur WhatsApp.</p>
+        <div class="contact-details">
+          <a class="contact-detail" href="https://wa.me/{{ contact_whatsapp_number }}" target="_blank" rel="noopener noreferrer">
+            <span class="contact-detail-icon">{% icon "phone" size=21 %}</span>
+            <span><span class="contact-detail-label">WhatsApp</span><strong>+228 91 54 03 86</strong></span>
+          </a>
+        </div>
+        <a class="btn btn-accent btn-lg w-100 mt-4 contact-whatsapp-button"
+           href="https://wa.me/{{ contact_whatsapp_number }}?text=Bonjour%2C%20je%20vous%20contacte%20via%20ACCIMAP."
+           target="_blank" rel="noopener noreferrer">
+          {% icon "send" size=19 %} Ouvrir WhatsApp
+        </a>
+        <div class="contact-response-note mt-4 pt-4">
+          {% icon "clock" size=19 %}
+          <span>La conversation s'ouvrira dans WhatsApp ou WhatsApp Web. Vous pourrez rédiger et envoyer votre message directement.</span>
         </div>
       </div>
     </div>
 
-    <aside class="col-lg-5" aria-label="Coordonnées de contact">
-      <div class="contact-aside page-banner rounded-4 p-4 p-md-5">
-        <span class="contact-eyebrow contact-eyebrow-light">Restons en contact</span>
-        <h2 class="h3 mt-2 mb-3">Vous préférez nous joindre directement ?</h2>
-        <p class="contact-aside-copy mb-4">Appelez-nous ou envoyez-nous un e-mail. Nous vous répondrons dans les meilleurs délais.</p>
-        <div class="contact-details">
-          <a class="contact-detail" href="tel:91540386">
-            <span class="contact-detail-icon">{% icon "phone" size=21 %}</span>
-            <span><span class="contact-detail-label">Téléphone</span><strong>91 54 03 86</strong></span>
-          </a>
-          <a class="contact-detail" href="mailto:{{ contact_email }}">
-            <span class="contact-detail-icon">{% icon "mail" size=21 %}</span>
-            <span><span class="contact-detail-label">E-mail</span><strong class="contact-email-value">{{ contact_email }}</strong></span>
-          </a>
-        </div>
-        <div class="contact-response-note mt-4 pt-4">
-          {% icon "clock" size=19 %}
-          <span>Chaque message est transmis directement à l'équipe ACCIMAP.</span>
-        </div>
-      </div>
+    <aside class="col-lg-5" aria-label="À propos d'ACCIMAP">
       <div class="contact-note card mt-3">
         <div class="card-body d-flex gap-3 align-items-start">
           <span class="info-icon flex-shrink-0">{% icon "map-pin" size=22 %}</span>
