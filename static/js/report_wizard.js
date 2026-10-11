@@ -20,6 +20,7 @@
     tiles: "Le fond de carte n'a pas pu être chargé (vérifiez votre connexion). Vous pouvez néanmoins placer le repère.",
     leadFound: "Nous avons trouvé votre position.",
     leadManual: "Touchez la carte pour indiquer où l'accident s'est produit.",
+    refiningAccuracy: "La recherche peut prendre jusqu'à 20 secondes. Gardez la localisation précise et le Wi-Fi activés.",
     placeLoading: "Recherche du quartier…",
     placeNone: "Position précise enregistrée (quartier non disponible).",
     confirm: "Confirmer cette position",
@@ -27,10 +28,10 @@
     photoSize: "Cette photo est trop volumineuse.",
     photoType: "Format non accepté : choisissez une photo JPEG, PNG ou WebP.",
     improvingAccuracy: function (m) {
-      return "Position approximative reçue (environ " + m + " m) ; recherche d'une meilleure précision…";
+      return "Position approximative reçue (environ " + m + " m) ; recherche d'une meilleure précision… " + MSG.refiningAccuracy;
     },
     lowAccuracy: function (m) {
-      return "Le téléphone a fourni une position imprécise (environ " + m + " m). Activez la localisation précise et le GPS dans les réglages, puis réessayez dehors. Vous pouvez aussi toucher la carte ou déplacer le repère.";
+      return "Le téléphone a fourni une position imprécise (environ " + m + " m). Vérifiez que la localisation précise, le GPS et le Wi-Fi sont activés, puis réessayez. La précision dépend du téléphone et du signal ; vous pouvez aussi toucher la carte ou déplacer le repère.";
     }
   };
   var TITLES = ["Type d'accident", "Lieu", "Détails", "Envoi"];
@@ -387,13 +388,13 @@
         if (bestPosition) { showPosition(bestPosition); }
         else { showLocationError(err); }
       },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+      { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
     );
     locationTimer = window.setTimeout(function () {
       if (!isLocating) { return; }
       if (bestPosition) { showPosition(bestPosition); }
       else { showLocationError({ code: 3 }); }
-    }, 6000);
+    }, 20000);
   }
 
   function enterLocationStep() {

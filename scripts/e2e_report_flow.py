@@ -347,7 +347,15 @@ def scenario_gps_failures(p, name, viewport, mobile):
         click_map(page, mobile)
         check(f"GPS {label} : la sélection manuelle reste possible", page.locator("#confirm-position-btn").is_enabled())
         browser.close()
-    browser, page = new_page(p, viewport, mobile, accuracy=600)
+    coarse_only = """Object.defineProperty(navigator, "geolocation", { configurable: true, value: {
+      watchPosition: function (success, error) {
+        setTimeout(function () { success({coords: {latitude: 6.10, longitude: 1.20, accuracy: 600}}); }, 50);
+        setTimeout(function () { error({code: 2}); }, 100);
+        return 8;
+      },
+      clearWatch: function () {}
+    }});"""
+    browser, page = new_page(p, viewport, mobile, init_script=coarse_only)
     page.goto(BASE + "/report/"); page.wait_for_load_state("networkidle")
     pick_type(page, mobile)
     page.wait_for_selector("#location-status.alert-warning")
@@ -357,7 +365,7 @@ def scenario_gps_failures(p, name, viewport, mobile):
     refine = """Object.defineProperty(navigator, "geolocation", { configurable: true, value: {
       watchPosition: function (success) {
         setTimeout(function () { success({coords: {latitude: 6.10, longitude: 1.20, accuracy: 480}}); }, 50);
-        setTimeout(function () { success({coords: {latitude: 6.1319, longitude: 1.2228, accuracy: 15}}); }, 250);
+        setTimeout(function () { success({coords: {latitude: 6.1319, longitude: 1.2228, accuracy: 15}}); }, 6500);
         return 7;
       },
       clearWatch: function () {}
@@ -366,7 +374,7 @@ def scenario_gps_failures(p, name, viewport, mobile):
     page.goto(BASE + "/report/"); page.wait_for_load_state("networkidle")
     pick_type(page, mobile)
     page.wait_for_function("document.getElementById('location-status').classList.contains('alert-success')")
-    check("GPS : une meilleure mesure remplace la position approximative",
+    check("GPS : une meilleure mesure reçue après 6 secondes remplace la position approximative",
           abs(float(page.input_value("#id_latitude")) - 6.1319) < 1e-6
           and abs(float(page.input_value("#id_longitude")) - 1.2228) < 1e-6
           and "Vérifiez le repère" in page.locator("#location-status").inner_text())
