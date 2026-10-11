@@ -26,8 +26,11 @@
     confirmAnyway: "Confirmer malgré tout",
     photoSize: "Cette photo est trop volumineuse.",
     photoType: "Format non accepté : choisissez une photo JPEG, PNG ou WebP.",
+    improvingAccuracy: function (m) {
+      return "Position approximative reçue (environ " + m + " m) ; recherche d'une meilleure précision…";
+    },
     lowAccuracy: function (m) {
-      return "Position trouvée, mais peu précise (environ " + m + " m). Vérifiez le repère et déplacez-le si besoin.";
+      return "Le téléphone a fourni une position imprécise (environ " + m + " m). Activez la localisation précise et le GPS dans les réglages, puis réessayez dehors. Vous pouvez aussi toucher la carte ou déplacer le repère.";
     }
   };
   var TITLES = ["Type d'accident", "Lieu", "Détails", "Envoi"];
@@ -310,7 +313,52 @@
     }
   }
 
-  function endLocating() { gpsBtn.disabled = false; gpsBtn.innerHTML = gpsLabel; }
+  var locationWatch = null, locationTimer = null, bestPosition = null, isLocating = false;
+
+  function endLocating() {
+    isLocating = false;
+    if (locationWatch !== null) {
+      navigator.geolocation.clearWatch(locationWatch);
+      locationWatch = null;
+    }
+    if (locationTimer !== null) {
+      window.clearTimeout(locationTimer);
+      locationTimer = null;
+    }
+    gpsBtn.disabled = false;
+    gpsBtn.innerHTML = gpsLabel;
+  }
+
+  function positionAccuracy(pos) {
+    var accuracy = pos && pos.coords && pos.coords.accuracy;
+    return typeof accuracy === "number" && isFinite(accuracy) && accuracy > 0 ? accuracy : Infinity;
+  }
+
+  function showPosition(pos) {
+    endLocating();
+    var lat = pos.coords.latitude, lng = pos.coords.longitude;
+    setPosition(lat, lng);
+    leadEl.textContent = MSG.leadFound;
+    if (hasMap) {
+      removeAccuracy();
+      if (isFinite(positionAccuracy(pos))) {
+        accuracyCircle = L.circle([lat, lng], { radius: positionAccuracy(pos), color: "#1d5f9a", weight: 1, fillOpacity: 0.1, interactive: false }).addTo(map);
+      }
+      map.setView([lat, lng], Math.max(map.getZoom(), 17));
+    }
+    var accuracy = positionAccuracy(pos);
+    if (accuracy > 100) { showStatus("warning", MSG.lowAccuracy(Math.round(accuracy))); } else { showStatus("success", MSG.found); }
+  }
+
+  function showLocationError(err) {
+    endLocating();
+    var text = MSG.unknown;
+    if (err && err.code === 1) { text = MSG.denied; }
+    else if (err && err.code === 2) { text = MSG.unavailable; }
+    else if (err && err.code === 3) { text = MSG.timeout; }
+    showStatus("warning", text);
+    leadEl.textContent = MSG.leadManual;
+  }
 
   function locate() {
     if (!("geolocation" in navigator)) { showStatus("warning", MSG.unsupported); leadEl.textContent = MSG.leadManual; return; }
@@ -319,34 +367,33 @@
     gpsBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>' + MSG.locating;
     showStatus("info", MSG.locating);
 
-    navigator.geolocation.getCurrentPosition(
+    bestPosition = null;
+    isLocating = true;
+    locationWatch = navigator.geolocation.watchPosition(
       function (pos) {
-        endLocating();
-        var lat = pos.coords.latitude, lng = pos.coords.longitude;
-        setPosition(lat, lng);
-        leadEl.textContent = MSG.leadFound;
-        if (hasMap) {
-          removeAccuracy();
-          if (pos.coords.accuracy) {
-            accuracyCircle = L.circle([lat, lng], { radius: pos.coords.accuracy, color: "#1d5f9a", weight: 1, fillOpacity: 0.1, interactive: false }).addTo(map);
-          }
-          map.setView([lat, lng], Math.max(map.getZoom(), 17));
+        if (!isLocating) { return; }
+        if (!bestPosition || positionAccuracy(pos) < positionAccuracy(bestPosition)) {
+          bestPosition = pos;
         }
-        var accuracy = Math.round(pos.coords.accuracy || 0);
-        if (accuracy > 100) { showStatus("warning", MSG.lowAccuracy(accuracy)); } else { showStatus("success", MSG.found); }
+        var accuracy = positionAccuracy(bestPosition);
+        if (accuracy <= 100) {
+          showPosition(bestPosition);
+        } else {
+          showStatus("info", MSG.improvingAccuracy(Math.round(accuracy)));
+        }
       },
       function (err) {
-        endLocating();
-        // Dans tous les cas, la sélection manuelle sur la carte reste possible.
-        var text = MSG.unknown;
-        if (err && err.code === 1) { text = MSG.denied; }
-        else if (err && err.code === 2) { text = MSG.unavailable; }
-        else if (err && err.code === 3) { text = MSG.timeout; }
-        showStatus("warning", text);
-        leadEl.textContent = MSG.leadManual;
+        if (!isLocating) { return; }
+        if (bestPosition) { showPosition(bestPosition); }
+        else { showLocationError(err); }
       },
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
     );
+    locationTimer = window.setTimeout(function () {
+      if (!isLocating) { return; }
+      if (bestPosition) { showPosition(bestPosition); }
+      else { showLocationError({ code: 3 }); }
+    }, 6000);
   }
 
   function enterLocationStep() {

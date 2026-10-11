@@ -335,8 +335,8 @@ def scenario_gps_failures(p, name, viewport, mobile):
     print(f"\n--- [{name}] GPS : indisponible / introuvable / délai / peu précis")
     cases = [
         ("navigateur sans géolocalisation", "delete Navigator.prototype.geolocation;", True, "ne permet pas la géolocalisation"),
-        ("position introuvable", "navigator.geolocation.getCurrentPosition = (ok, err) => setTimeout(() => err({code: 2}), 50);", True, "indisponible"),
-        ("délai dépassé", "navigator.geolocation.getCurrentPosition = (ok, err) => setTimeout(() => err({code: 3}), 50);", True, "trop de temps"),
+        ("position introuvable", "navigator.geolocation.watchPosition = (ok, err) => { setTimeout(() => err({code: 2}), 50); return 1; }; navigator.geolocation.clearWatch = () => {};", True, "indisponible"),
+        ("délai dépassé", "navigator.geolocation.watchPosition = (ok, err) => { setTimeout(() => err({code: 3}), 50); return 1; }; navigator.geolocation.clearWatch = () => {};", True, "trop de temps"),
     ]
     for label, script, geoloc, expected in cases:
         browser, page = new_page(p, viewport, mobile, geolocation=geoloc, init_script=script)
@@ -351,7 +351,25 @@ def scenario_gps_failures(p, name, viewport, mobile):
     page.goto(BASE + "/report/"); page.wait_for_load_state("networkidle")
     pick_type(page, mobile)
     page.wait_for_selector("#location-status.alert-warning")
-    check("GPS peu précis : avertissement de précision, position tout de même proposée", "peu précise" in page.locator("#location-status").inner_text() and page.input_value("#id_latitude") != "")
+    check("GPS peu précis : avertissement de précision, position tout de même proposée", "position imprécise" in page.locator("#location-status").inner_text() and page.input_value("#id_latitude") != "")
+    browser.close()
+
+    refine = """Object.defineProperty(navigator, "geolocation", { configurable: true, value: {
+      watchPosition: function (success) {
+        setTimeout(function () { success({coords: {latitude: 6.10, longitude: 1.20, accuracy: 480}}); }, 50);
+        setTimeout(function () { success({coords: {latitude: 6.1319, longitude: 1.2228, accuracy: 15}}); }, 250);
+        return 7;
+      },
+      clearWatch: function () {}
+    }});"""
+    browser, page = new_page(p, viewport, mobile, init_script=refine)
+    page.goto(BASE + "/report/"); page.wait_for_load_state("networkidle")
+    pick_type(page, mobile)
+    page.wait_for_function("document.getElementById('location-status').classList.contains('alert-success')")
+    check("GPS : une meilleure mesure remplace la position approximative",
+          abs(float(page.input_value("#id_latitude")) - 6.1319) < 1e-6
+          and abs(float(page.input_value("#id_longitude")) - 1.2228) < 1e-6
+          and "Vérifiez le repère" in page.locator("#location-status").inner_text())
     browser.close()
 
 
