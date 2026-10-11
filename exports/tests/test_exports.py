@@ -91,7 +91,8 @@ class CsvExportTests(ExportDataMixin, PersonasTestCase):
     def test_mode_et_zone(self):
         rows = {r[0]: dict(zip(csv_rows(self.client.get(self.url))[0], r)) for r in csv_rows(self.client.get(self.url))[1:]}
         self.assertEqual(rows[self.p.reference]["Mode"], "Anonyme")
-        self.assertEqual(rows[self.p.reference]["Type d'accident"], "Vitesse excessive")
+        self.assertEqual(rows[self.p.reference]["Type d'accident"], "Autre")
+        self.assertEqual(rows[self.p.reference]["Cause de l'accident"], "Vitesse excessive")
         self.assertEqual(rows[self.r.reference]["Zone de couverture"], "Hors zone")
 
     def test_injection_de_formule_neutralisee(self):
@@ -187,7 +188,10 @@ class XlsxExportTests(ExportDataMixin, PersonasTestCase):
         last_col = get_column_letter(len(services.COLUMNS))
         self.assertEqual(ws.auto_filter.ref, f"A1:{last_col}{ws.max_row}")
         self.assertEqual(ws.max_row, 4)
-        self.assertEqual(ws.column_dimensions["N"].width, 50)     # description lisible
+        description_column = get_column_letter(
+            next(i for i, column in enumerate(services.COLUMNS, start=1) if column.key == "description")
+        )
+        self.assertEqual(ws.column_dimensions[description_column].width, 50)
 
     def test_valeurs_typees(self):
         _, wb = self.workbook(status="VERIFIED")
@@ -204,14 +208,20 @@ class XlsxExportTests(ExportDataMixin, PersonasTestCase):
 
     def test_injection_de_formule_neutralisee(self):
         _, wb = self.workbook(status="PENDING")
-        cell = wb["Signalements"]["N2"]
+        description_column = get_column_letter(
+            next(i for i, column in enumerate(services.COLUMNS, start=1) if column.key == "description")
+        )
+        cell = wb["Signalements"][f"{description_column}2"]
         self.assertEqual(cell.value, "'" + FORMULA)
         self.assertEqual(cell.data_type, "s")          # texte, jamais une formule
 
     def test_caracteres_de_controle_supprimes(self):
         make_report(status="VERIFIED", description="avant\x07\x0bapres")
         _, wb = self.workbook(q="avant")
-        self.assertEqual(wb["Signalements"]["N2"].value, "avantapres")
+        description_column = get_column_letter(
+            next(i for i, column in enumerate(services.COLUMNS, start=1) if column.key == "description")
+        )
+        self.assertEqual(wb["Signalements"][f"{description_column}2"].value, "avantapres")
 
     def test_filtres_respectes(self):
         _, wb = self.workbook(mode="identified", zone="outside")

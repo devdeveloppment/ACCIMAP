@@ -5,7 +5,7 @@ Vérification de bout en bout du PARCOURS DE SIGNALEMENT EN 4 ÉTAPES dans un vr
     1. Type d'accident (cartes)   2. Lieu (carte, GPS automatique, confirmation)
     3. Détails (compteurs, photo)  4. Récapitulatif et envoi
 
-Couvre : parcours public sans connexion ; GPS autorisé / refusé / indisponible / position
+Couvre : parcours public sans connexion en 5 étapes (type puis cause) ; GPS autorisé / refusé / indisponible / position
 introuvable / délai dépassé / peu précis ; sélection manuelle ; lat-lon réellement enregistrées ; position hors
 zone (avertissement + confirmation) ; photo avec EXIF ; validation SERVEUR (réouverture de l'étape en erreur) ;
 retour du navigateur ; repli SANS JavaScript ; mise en page ; absence d'emoji ; contrôle DIRECT en base.
@@ -131,6 +131,8 @@ def record(page):
 def pick_type(page, mobile, value="COLLISION"):
     tap_or_click(page, mobile, f"label[for='type-{value}']")
     wait_step(page, 2)
+    tap_or_click(page, mobile, "label[for='cause-EXCESSIVE_SPEED']")
+    wait_step(page, 3)
 
 
 def click_map(page, mobile, dx=20, dy=10):
@@ -153,12 +155,12 @@ def fill_details(page, photo=None, vehicles=2):
     bump(page, "id_injured_count", 3)
     bump(page, "id_death_count", 1)
     if photo:
-        page.set_input_files("#id_photo", photo)
+        page.set_input_files("#id_photos", photo)
 
 
 def go_to_recap(page, mobile):
-    page.click("#step3-next")
-    wait_step(page, 4)
+    page.click("#step4-next")
+    wait_step(page, 5)
 
 
 def no_emoji(page, label):
@@ -167,7 +169,7 @@ def no_emoji(page, label):
 
 # --------------------------------------------------------------------------
 def scenario_public(p, name, viewport, mobile):
-    print(f"\n--- [{name}] Parcours PUBLIC sans compte : 4 étapes -> enregistrement anonyme")
+    print(f"\n--- [{name}] Parcours PUBLIC sans compte : type -> cause -> enregistrement anonyme")
     browser, page = new_page(p, viewport, mobile)
     page.goto(BASE + "/"); page.wait_for_load_state("networkidle")
     check("Accueil : bouton « Signaler un accident » très visible (grand)", page.locator(".hero a.btn-accent").bounding_box()["height"] >= 52)
@@ -184,7 +186,7 @@ def scenario_public(p, name, viewport, mobile):
     check("Étape 1 : aucune identité ni numéro demandés",
           "Aucun compte requis" in page.locator("#mode-note").inner_text()
           and "+228" not in page.locator("main").inner_text())
-    check("Indicateur : étape 1 active, progression 25 %", page.locator(".stepper-item.is-active").get_attribute("data-step") == "1" and page.get_attribute("#wizard-progress", "aria-valuenow") == "1")
+    check("Indicateur : étape 1 active sur 5", page.locator(".stepper-item.is-active").get_attribute("data-step") == "1" and page.get_attribute("#wizard-progress", "aria-valuemax") == "5")
     check("Étapes futures non cliquables", page.locator(".stepper-item[data-step='3'] .stepper-btn").is_disabled())
     check("« Continuer » désactivé tant qu'aucun type n'est choisi", page.locator("#step1-next").is_disabled())
     no_overflow(page, "Étape 1"); tap_targets_ok(page, "Étape 1"); no_emoji(page, "Étape 1")
@@ -192,85 +194,89 @@ def scenario_public(p, name, viewport, mobile):
         sticky_bar_visible(page, viewport, "#step1-next", "Étape 1")
     page.screenshot(path=f"{SHOTS}/{name}_flow_1_type.png")
     tap_or_click(page, mobile, "label[for='type-OTHER']")
-    check("Choisir « Autre » révèle les six précisions",
-          page.locator("#other-type-options").is_visible() and page.locator(".cause-card").count() == 6)
-    tap_or_click(page, mobile, "label[for='cause-EXCESSIVE_SPEED']")
     wait_step(page, 2)
-    check("Choisir une précision passe à l'étape 2", step(page) == 2)
+    check("Après le type, une étape distincte affiche les six causes",
+          "Quelle est la cause de l'accident ?" in page.locator(".report-step.is-active h2").inner_text()
+          and page.locator(".cause-card").count() == 6)
+    tap_or_click(page, mobile, "label[for='cause-EXCESSIVE_SPEED']")
+    wait_step(page, 3)
+    check("Choisir une cause passe à l'étape du lieu", step(page) == 3)
     check("Indicateur : étape 1 terminée", page.locator(".stepper-item[data-step='1']").evaluate("e => e.classList.contains('is-done')"))
 
-    # ---- Étape 2 : GPS automatique
+    # ---- Étape 3 : GPS automatique
     page.wait_for_function("document.getElementById('id_latitude').value !== ''")
     lat, lon = float(page.input_value("#id_latitude")), float(page.input_value("#id_longitude"))
-    check("Étape 2 : position récupérée automatiquement (GPS autorisé)", abs(lat - LOME["latitude"]) < 1e-4 and abs(lon - LOME["longitude"]) < 1e-4, f"{lat},{lon}")
-    check("Étape 2 : carte Leaflet et repère affichés", page.locator("#location-map .leaflet-pane").count() > 0 and page.locator(".leaflet-marker-icon").count() == 1)
-    check("Étape 2 : « L'accident s'est-il produit ici ? »", "L'accident s'est-il produit ici ?" in page.locator("#location-question").inner_text())
+    check("Étape 3 : position récupérée automatiquement (GPS autorisé)", abs(lat - LOME["latitude"]) < 1e-4 and abs(lon - LOME["longitude"]) < 1e-4, f"{lat},{lon}")
+    check("Étape 3 : carte Leaflet et repère affichés", page.locator("#location-map .leaflet-pane").count() > 0 and page.locator(".leaflet-marker-icon").count() == 1)
+    check("Étape 3 : « L'accident s'est-il produit ici ? »", "L'accident s'est-il produit ici ?" in page.locator("#location-question").inner_text())
     page.wait_for_function(f"document.getElementById('place-label').textContent.includes('{PLACE}')")
-    check("Étape 2 : indication lisible du lieu affichée", PLACE in page.locator("#place-label").inner_text())
-    check("Étape 2 : latitude et longitude visibles avant confirmation", page.locator("#id_latitude").is_visible() and page.locator("#id_longitude").is_visible())
-    check("Étape 2 : message de succès GPS", "Position trouvée" in page.locator("#location-status").inner_text())
-    check("Étape 2 : bouton « Confirmer cette position » actif", page.locator("#confirm-position-btn").is_enabled() and "Confirmer cette position" in page.locator("#confirm-position-btn").inner_text())
-    no_overflow(page, "Étape 2"); tap_targets_ok(page, "Étape 2")
+    check("Étape 3 : indication lisible du lieu affichée", PLACE in page.locator("#place-label").inner_text())
+    check("Étape 3 : latitude et longitude visibles avant confirmation", page.locator("#id_latitude").is_visible() and page.locator("#id_longitude").is_visible())
+    check("Étape 3 : message de succès GPS", "Position trouvée" in page.locator("#location-status").inner_text())
+    check("Étape 3 : bouton « Confirmer cette position » actif", page.locator("#confirm-position-btn").is_enabled() and "Confirmer cette position" in page.locator("#confirm-position-btn").inner_text())
+    no_overflow(page, "Étape 3"); tap_targets_ok(page, "Étape 3")
     if mobile:
-        sticky_bar_visible(page, viewport, "#confirm-position-btn", "Étape 2")
+        sticky_bar_visible(page, viewport, "#confirm-position-btn", "Étape 3")
         for selector, what in (("#location-question", "la question « L'accident s'est-il produit ici ? »"), ("#place-label", "le quartier"),
                                ("#id_latitude", "la latitude"), ("#id_longitude", "la longitude")):
             box = page.locator(selector).bounding_box()
-            check(f"Étape 2 (téléphone) : {what} visible sans défiler", box and box["y"] >= 0 and box["y"] + box["height"] <= viewport["height"], str(box))
+            check(f"Étape 3 (téléphone) : {what} visible sans défiler", box and box["y"] >= 0 and box["y"] + box["height"] <= viewport["height"], str(box))
         map_box = page.locator("#location-map").bounding_box()
-        check("Étape 2 (téléphone) : la carte reste assez grande (>= 200 px visibles)", map_box["height"] >= 200, str(map_box))
-    page.screenshot(path=f"{SHOTS}/{name}_flow_2_location.png")
+        check("Étape 3 (téléphone) : la carte reste assez grande (>= 200 px visibles)", map_box["height"] >= 200, str(map_box))
+    page.screenshot(path=f"{SHOTS}/{name}_flow_3_location.png")
     # Corriger la position en déplaçant le repère (clic carte) puis revenir à la position GPS
     click_map(page, mobile, 60, 40)
     moved = float(page.input_value("#id_latitude"))
-    check("Étape 2 : la position peut être corrigée sur la carte", abs(moved - lat) > 1e-5)
+    check("Étape 3 : la position peut être corrigée sur la carte", abs(moved - lat) > 1e-5)
     page.click("#gps-btn"); page.wait_for_function(f"Math.abs(parseFloat(document.getElementById('id_latitude').value) - {LOME['latitude']}) < 1e-4")
-    page.click("#confirm-position-btn"); wait_step(page, 3)
-    check("Confirmation de la position -> étape 3", step(page) == 3)
+    page.click("#confirm-position-btn"); wait_step(page, 4)
+    check("Confirmation de la position -> étape 4", step(page) == 4)
 
-    # ---- Étape 3
+    # ---- Étape 4
     tmp = tempfile.mkdtemp()
     photo = make_photo(tmp)
-    check("Étape 3 : date et heure préremplies", re.fullmatch(r"\d{4}-\d{2}-\d{2}", page.input_value("#id_accident_date")) and re.fullmatch(r"\d{2}:\d{2}", page.input_value("#id_accident_time")))
-    check("Étape 3 : véhicules FACULTATIF, vide par défaut, étiquette « facultatif »", page.input_value("#id_vehicle_count") == "" and "facultatif" in page.locator("#vehicle-counter").inner_text() and "Nombre approximatif de véhicules impliqués" in page.locator("#vehicle-counter").inner_text())
+    check("Étape 4 : date et heure préremplies", re.fullmatch(r"\d{4}-\d{2}-\d{2}", page.input_value("#id_accident_date")) and re.fullmatch(r"\d{2}:\d{2}", page.input_value("#id_accident_time")))
+    check("Étape 4 : véhicules FACULTATIF, vide par défaut, étiquette « facultatif »", page.input_value("#id_vehicle_count") == "" and "facultatif" in page.locator("#vehicle-counter").inner_text() and "Véhicules" in page.locator("#vehicle-counter").inner_text())
     check("Véhicules : clavier numérique sur mobile", page.get_attribute("#id_vehicle_count", "inputmode") == "numeric")
     bump(page, "id_vehicle_count", 1, -1)
     check("Véhicules : « − » sur un champ vide ne crée pas de valeur", page.input_value("#id_vehicle_count") == "")
     fill_details(page, photo)
-    check("Étape 3 : compteurs +/- (véhicules 2, blessés 3, décès 1)", (page.input_value("#id_vehicle_count"), page.input_value("#id_injured_count"), page.input_value("#id_death_count")) == ("2", "3", "1"))
+    check("Étape 4 : compteurs +/- (véhicules 2, blessés 3, décès 1)", (page.input_value("#id_vehicle_count"), page.input_value("#id_injured_count"), page.input_value("#id_death_count")) == ("2", "3", "1"))
     bump(page, "id_death_count", 2, -1)
-    check("Étape 3 : un compteur ne descend jamais sous zéro", page.input_value("#id_death_count") == "0")
+    check("Étape 4 : un compteur ne descend jamais sous zéro", page.input_value("#id_death_count") == "0")
     bump(page, "id_death_count", 1)
-    check("Étape 3 : aperçu de la photo + bouton « Changer »", page.locator("#photo-preview").is_visible() and "Changer" in page.locator("#photo-btn").inner_text())
-    no_overflow(page, "Étape 3"); tap_targets_ok(page, "Étape 3"); no_emoji(page, "Étape 3")
-    page.screenshot(path=f"{SHOTS}/{name}_flow_3_details.png", full_page=True)
+    check("Étape 4 : aperçu de la photo", page.locator("#photo-grid").is_visible() and page.locator("#photo-grid img").count() == 1)
+    no_overflow(page, "Étape 4"); tap_targets_ok(page, "Étape 4"); no_emoji(page, "Étape 4")
+    page.screenshot(path=f"{SHOTS}/{name}_flow_4_details.png", full_page=True)
 
-    # ---- Étape 4 : récapitulatif
+    # ---- Étape 5 : récapitulatif
     go_to_recap(page, mobile)
     recap = page.locator("#recap").inner_text()
-    check("Récapitulatif : type et précision sélectionnés",
-          "Autre — Vitesse excessive" in page.locator("#recap-type").inner_text())
+    check("Récapitulatif : type et cause présentés séparément",
+          page.locator("#recap-type").inner_text() == "Autre"
+          and page.locator("#recap-cause").inner_text() == "Vitesse excessive")
     check("Récapitulatif : lieu lisible + coordonnées", PLACE in page.locator("#recap-place").inner_text() and re.search(r"6\.1319\d*, 1\.2228\d*", page.locator("#recap-coords").inner_text()), page.locator("#recap-coords").inner_text())
     check("Récapitulatif : date, heure, gravité, nombres", re.search(r"\d{2}/\d{2}/\d{4} à \d{2}:\d{2}", page.locator("#recap-datetime").inner_text()) and "Grave" in page.locator("#recap-severity").inner_text() and "Véhicules : 2" in page.locator("#recap-counts").inner_text() and "Blessés : 3" in page.locator("#recap-counts").inner_text() and "Décès : 1" in page.locator("#recap-counts").inner_text())
-    check("Récapitulatif : description et photo", "Collision au carrefour" in page.locator("#recap-description").inner_text() and page.locator("#recap-photo").is_visible())
+    check("Récapitulatif : description et photo", "Collision au carrefour" in page.locator("#recap-description").inner_text() and page.locator("#recap-photo-row").is_visible() and page.locator("#recap-photos img").count() == 1)
     check("Récapitulatif : aucune identité demandée",
-          "aucune identité n'est enregistrée" in page.locator("#recap-declarant").inner_text().lower())
+          "aucune identité n'est demandée" in page.locator("#recap-declarant").inner_text().lower())
     check("Récapitulatif : icône SVG du type", page.locator("#recap-type-icon svg").count() == 1)
     check("Bouton « Envoyer le signalement » clair", page.locator("#submit-report").inner_text().strip() == "Envoyer le signalement")
-    no_overflow(page, "Étape 4"); tap_targets_ok(page, "Étape 4"); no_emoji(page, "Étape 4")
+    no_overflow(page, "Étape 5"); tap_targets_ok(page, "Étape 5"); no_emoji(page, "Étape 5")
     if mobile:
-        sticky_bar_visible(page, viewport, "#submit-report", "Étape 4")
-    page.screenshot(path=f"{SHOTS}/{name}_flow_4_recap.png", full_page=True)
+        sticky_bar_visible(page, viewport, "#submit-report", "Étape 5")
+    page.screenshot(path=f"{SHOTS}/{name}_flow_5_recap.png", full_page=True)
 
     # Navigation : « Modifier » puis retour du navigateur
     page.click(".recap-edit[data-goto='1']"); wait_step(page, 1)
     check("« Modifier » ramène à l'étape du type", step(page) == 1 and page.locator("#type-OTHER").is_checked()
           and page.locator("#cause-EXCESSIVE_SPEED").is_checked())
-    page.go_back(); wait_step(page, 4)
-    check("Bouton « Retour » du navigateur : revient à l'étape précédente", step(page) == 4)
-    page.go_back(); wait_step(page, 3); page.go_back(); wait_step(page, 2)
-    check("Retour du navigateur : remonte les étapes (4 -> 3 -> 2)", step(page) == 2)
-    page.click("#confirm-position-btn"); wait_step(page, 3); go_to_recap(page, mobile)
+    page.go_back(); wait_step(page, 5)
+    check("Bouton « Retour » du navigateur : revient à l'étape précédente", step(page) == 5)
+    page.go_back(); wait_step(page, 4); page.go_back(); wait_step(page, 3); page.go_back(); wait_step(page, 2)
+    check("Retour du navigateur : remonte les étapes (5 -> 4 -> 3 -> 2)", step(page) == 2)
+    page.click("#step2-next"); wait_step(page, 3)
+    page.click("#confirm-position-btn"); wait_step(page, 4); go_to_recap(page, mobile)
 
     page.click("#submit-report")
     page.wait_for_url(re.compile(r"/report/success/"))
@@ -314,11 +320,11 @@ def scenario_anonymous_gps_denied(p, name, viewport, mobile):
     check("Sélection manuelle : latitude/longitude affichées avant confirmation", 5.5 < lat < 6.8 and 0.7 < lon < 1.8, f"{lat},{lon}")
     check("Sélection manuelle : repère affiché et bouton actif", page.locator(".leaflet-marker-icon").count() == 1 and page.locator("#confirm-position-btn").is_enabled())
     check("Position dans la zone : aucun avertissement", page.locator("#outside-zone-box").is_hidden())
-    page.click("#confirm-position-btn"); wait_step(page, 3)
+    page.click("#confirm-position-btn"); wait_step(page, 4)
     fill_details(page, vehicles=0)                # véhicules laissés vides
     go_to_recap(page, mobile)
     check("Récapitulatif : véhicules « non renseigné » quand le champ est vide", "Véhicules : non renseigné" in page.locator("#recap-counts").inner_text())
-    check("Récapitulatif anonyme : aucune identité", "aucune identité n'est enregistrée" in page.locator("#recap-declarant").inner_text())
+    check("Récapitulatif anonyme : aucune identité", "aucune identité n'est demandée" in page.locator("#recap-declarant").inner_text().lower())
     check("Récapitulatif : photo absente", page.locator("#recap-photo-row").is_hidden())
     page.click("#submit-report"); page.wait_for_url(re.compile(r"/report/success/"))
     check("Confirmation : « enregistré anonymement »", "Votre signalement a été enregistré anonymement." in page.locator("#success-message").inner_text())
@@ -398,7 +404,7 @@ def scenario_outside_zone(p, name, viewport, mobile):
     check("Le bouton devient « Confirmer malgré tout »", "Confirmer malgré tout" in page.locator("#confirm-position-btn").inner_text())
     check("La position n'est PAS déplacée vers la zone", float(lat) < 6.08)
     page.screenshot(path=f"{SHOTS}/{name}_flow_outside.png")
-    page.click("#confirm-position-btn"); wait_step(page, 3)
+    page.click("#confirm-position-btn"); wait_step(page, 4)
     fill_details(page); go_to_recap(page, mobile)
     page.click("#submit-report"); page.wait_for_url(re.compile(r"/report/success/"))
     report = record(page)
@@ -413,34 +419,38 @@ def scenario_validation(p, name, viewport, mobile):
     page.goto(BASE + "/report/"); page.wait_for_load_state("networkidle")
     page.click("#step1-next", force=True) if page.locator("#step1-next").is_enabled() else None
     check("Étape 1 : impossible de continuer sans type", step(page) == 1 and page.locator("#step1-next").is_disabled())
-    page.locator("#stepper .stepper-item[data-step='4'] .stepper-btn").click(force=True)
+    page.locator("#stepper .stepper-item[data-step='5'] .stepper-btn").click(force=True)
     check("Étape 4 non atteignable depuis l'indicateur sans passer par les étapes", step(page) == 1)
     page.focus("#type-COLLISION"); page.keyboard.press("Space")
     check("Clavier : choisir un type n'avance pas tout seul (bouton « Continuer »)", step(page) == 1 and page.locator("#step1-next").is_enabled())
     page.press("#type-COLLISION", "Enter")
     wait_step(page, 2)
+    page.focus("#cause-EXCESSIVE_SPEED"); page.keyboard.press("Space")
+    page.click("#step2-next")
+    wait_step(page, 3)
     page.wait_for_function("document.getElementById('id_latitude').value !== ''")
-    page.click("#confirm-position-btn"); wait_step(page, 3)
+    page.click("#confirm-position-btn"); wait_step(page, 4)
 
     page.fill("#id_accident_date", "")
-    page.click("#step3-next")
+    page.click("#step4-next")
     page.wait_for_timeout(300)
-    check("Étape 3 : date obligatoire, on reste sur l'étape", step(page) == 3)
+    check("Étape 4 : date obligatoire, on reste sur l'étape", step(page) == 4)
     page.evaluate("""() => { const d = new Date(); d.setDate(d.getDate() + 5);
         const f = document.getElementById('id_accident_date'); f.removeAttribute('max'); f.value = d.toISOString().slice(0, 10); }""")
     tmp = tempfile.mkdtemp()
     page.fill("#id_description", "Texte à conserver après erreur")
-    page.set_input_files("#id_photo", make_photo(tmp))
-    page.click("#step3-next"); wait_step(page, 4)
+    page.set_input_files("#id_photos", make_photo(tmp))
+    page.click("#step4-next"); wait_step(page, 5)
     page.click("#submit-report")
     page.wait_for_load_state("networkidle")
     check("Erreur SERVEUR (date future) : la page est réaffichée, aucun signalement créé", "/report/success/" not in page.url and AccidentReport.objects.filter(description="Texte à conserver après erreur").count() == 0)
-    wait_step(page, 3)
-    check("Erreur SERVEUR : l'étape à corriger s'ouvre automatiquement (étape 3)", step(page) == 3 and page.locator(".invalid-feedback").count() >= 1)
+    wait_step(page, 4)
+    check("Erreur SERVEUR : l'étape à corriger s'ouvre automatiquement (étape 4)", step(page) == 4 and page.locator(".invalid-feedback").count() >= 1)
     check("Erreur SERVEUR : message explicite (date/heure dans le futur)", "futur" in page.locator("main").inner_text())
     check("Erreur SERVEUR : la saisie est conservée (type, position, description)",
-          page.locator("#type-COLLISION").is_checked() and page.input_value("#id_latitude") != "" and page.input_value("#id_description") == "Texte à conserver après erreur")
-    check("Erreur SERVEUR : on prévient que la photo doit être rechoisie", "ne conserve pas la photo" in page.locator("main").inner_text())
+          page.locator("#type-COLLISION").is_checked() and page.locator("#cause-EXCESSIVE_SPEED").is_checked()
+          and page.input_value("#id_latitude") != "" and page.input_value("#id_description") == "Texte à conserver après erreur")
+    check("Erreur SERVEUR : on prévient que la photo doit être rechoisie", "veuillez les choisir à nouveau" in page.locator("main").inner_text())
     page.screenshot(path=f"{SHOTS}/{name}_flow_server_error.png", full_page=True)
     check("Aucune erreur JavaScript", not [e for e in page.errors if "400" not in e], str(page.errors))
     browser.close()
@@ -450,14 +460,24 @@ def scenario_no_javascript(p, name, viewport, mobile):
     print(f"\n--- [{name}] Repli SANS JavaScript")
     browser, page = new_page(p, viewport, mobile, geolocation=False, js=False)
     page.goto(BASE + "/report/"); page.wait_for_load_state("domcontentloaded")
-    check("Sans JS : les 4 étapes sont toutes visibles", all(page.locator(f".report-step[data-step='{n}']").is_visible() for n in (1, 2, 3, 4)))
+    check("Sans JS : les 5 étapes sont toutes visibles", all(page.locator(f".report-step[data-step='{n}']").is_visible() for n in (1, 2, 3, 4, 5)))
     check("Sans JS : champs latitude/longitude modifiables", page.get_attribute("#id_latitude", "readonly") is None)
     page.click("label[for='type-OTHER']")
-    page.fill("#id_latitude", "6.1500"); page.fill("#id_longitude", "1.2300")
+    page.locator("#cause-EXCESSIVE_SPEED").evaluate("(input) => { input.checked = true; }")
+    page.locator("input[name='severity']").first.check(force=True)
+    page.fill("#id_latitude", str(LOME["latitude"])); page.fill("#id_longitude", str(LOME["longitude"]))
     page.fill("#id_description", "Envoi sans JavaScript")
-    page.click("#submit-report", force=True); page.wait_for_url(re.compile(r"/report/success/"))   # page longue : défilement fluide
+    page.click("#submit-report", force=True)
+    page.wait_for_load_state("domcontentloaded")
+    if not re.search(r"/report/success/", page.url):
+        invalid_fields = page.locator("#report-form").evaluate(
+            "form => Array.from(form.elements).filter(field => !field.checkValidity()).map(field => field.name).join(', ')"
+        )
+        check("Sans JS : le signalement s'enregistre (validation serveur)", False, invalid_fields)
+        browser.close()
+        return
     report = record(page)
-    check("Sans JS : le signalement s'enregistre (validation serveur)", report.accident_type == "OTHER" and report.is_anonymous and abs(report.latitude - 6.15) < 1e-6)
+    check("Sans JS : le signalement s'enregistre (validation serveur)", report.accident_type == "OTHER" and report.is_anonymous and abs(report.latitude - LOME["latitude"]) < 1e-6)
     browser.close()
 
 
@@ -473,7 +493,7 @@ def scenario_tiles_unavailable(p, name, viewport, mobile):
     check("Tuiles bloquées : on peut quand même placer le repère", page.locator(".leaflet-marker-icon").count() == 1 and page.locator("#confirm-position-btn").is_enabled())
     page.wait_for_function("document.getElementById('place-label').textContent.includes('non disponible')")
     check("Quartier indisponible : message neutre, parcours non bloqué", "quartier non disponible" in page.locator("#place-label").inner_text())
-    page.click("#confirm-position-btn"); wait_step(page, 3); fill_details(page); go_to_recap(page, mobile)
+    page.click("#confirm-position-btn"); wait_step(page, 4); fill_details(page); go_to_recap(page, mobile)
     check("Récapitulatif : repli « Position choisie sur la carte »", "Position choisie sur la carte" in page.locator("#recap-place").inner_text())
     browser.close()
 

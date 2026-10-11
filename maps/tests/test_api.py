@@ -13,7 +13,8 @@ from reports.tests.helpers import make_report
 
 URL = reverse("maps:public_data")
 FEATURE_KEYS = {"type", "geometry", "properties"}
-PROPERTY_KEYS = {"type", "type_label", "severity", "severity_label", "date", "time", "injured", "deaths"}
+PROPERTY_KEYS = {"type", "type_label", "cause", "cause_label", "severity", "severity_label",
+                 "date", "time", "injured", "deaths"}
 
 
 def fetch(client, **params):
@@ -66,7 +67,7 @@ class StatusVisibilityTests(TestCase):
         _, data = fetch(self.client)
         self.assertEqual(self.injured(data), [1, 2])
 
-    def test_type_autre_expose_sa_precision_dans_le_libelle(self):
+    def test_type_et_cause_sont_exposes_separement(self):
         report = make_report(
             status=ReportStatus.VERIFIED,
             accident_type="OTHER",
@@ -74,7 +75,9 @@ class StatusVisibilityTests(TestCase):
         )
         _, data = fetch(self.client)
         feature = next(f for f in data["features"] if f["properties"]["type"] == "OTHER")
-        self.assertEqual(feature["properties"]["type_label"], "Vitesse excessive")
+        self.assertEqual(feature["properties"]["type_label"], "Autre")
+        self.assertEqual(feature["properties"]["cause"], "EXCESSIVE_SPEED")
+        self.assertEqual(feature["properties"]["cause_label"], "Vitesse excessive")
         self.assertEqual(report.accident_type, "OTHER")
 
     def test_le_rejet_ou_la_remise_en_attente_le_retire(self):
@@ -177,10 +180,11 @@ class GeometryTests(TestCase):
         self.assertEqual(data["features"][0]["geometry"]["coordinates"], [1.2231, 6.1319])
 
     def test_contenu_des_proprietes(self):
-        make_report(status=ReportStatus.VERIFIED, accident_type="RUN_OFF_ROAD", severity="CRITICAL",
+        make_report(status=ReportStatus.VERIFIED, accident_type="RUN_OFF_ROAD", accident_cause="EXCESSIVE_SPEED", severity="CRITICAL",
                     accident_date=date(2026, 9, 20), accident_time="18:45", injured_count=3, death_count=1)
         props = fetch(self.client)[1]["features"][0]["properties"]
         self.assertEqual(props, {"type": "RUN_OFF_ROAD", "type_label": "Sortie de voie",
+                                 "cause": "EXCESSIVE_SPEED", "cause_label": "Vitesse excessive",
                                  "severity": "CRITICAL", "severity_label": "Très grave",
                                  "date": "2026-09-20", "time": "18:45", "injured": 3, "deaths": 1})
 

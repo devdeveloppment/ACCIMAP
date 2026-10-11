@@ -70,7 +70,7 @@ class AccidentReport(models.Model):
         "type d'accident", max_length=30, choices=AccidentType.choices
     )
     accident_cause = models.CharField(
-        "Causes de l'accident",
+        "cause de l'accident",
         max_length=30,
         choices=AccidentCause.choices,
         null=True,
@@ -135,9 +135,7 @@ class AccidentReport(models.Model):
     objects = AccidentReportQuerySet.as_manager()
 
     def get_reported_type_display(self):
-        """Affiche la précision choisie comme libellé du type, sans « Autre »."""
-        if self.accident_type == AccidentType.OTHER:
-            return self.get_accident_cause_display() or "Type non précisé"
+        """Retourne uniquement le libellé du type, sans le confondre avec sa cause."""
         return self.get_accident_type_display()
 
     class Meta:

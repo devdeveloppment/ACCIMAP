@@ -21,12 +21,13 @@
   {% if pending_reports %}
   <div class="table-responsive">
     <table class="table table-sm table-hover align-middle mb-0">
-      <thead><tr><th>Référence</th><th>Type</th><th class="d-none d-sm-table-cell">Date</th><th>Gravité</th><th class="d-none d-md-table-cell">Mode</th><th></th></tr></thead>
+      <thead><tr><th>Référence</th><th>Type</th><th class="d-none d-md-table-cell">Cause</th><th class="d-none d-sm-table-cell">Date</th><th>Gravité</th><th class="d-none d-md-table-cell">Mode</th><th></th></tr></thead>
       <tbody>
         {% for r in pending_reports %}
         <tr>
           <td class="fw-semibold">{{ r.reference }}</td>
           <td>{{ r.get_reported_type_display }}</td>
+          <td class="d-none d-md-table-cell">{{ r.get_accident_cause_display|default:"Non renseignée" }}</td>
           <td class="d-none d-sm-table-cell">{{ r.accident_date|date:"d/m/Y" }}</td>
           <td>{{ r.get_severity_display }}</td>
           <td class="d-none d-md-table-cell">{% if r.is_anonymous %}Anonyme{% else %}Identifié{% endif %}</td>

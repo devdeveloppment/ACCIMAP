@@ -113,6 +113,7 @@
     var box = el("div", "map-popup");
     box.appendChild(el("div", "fw-bold", p.reference));
     box.appendChild(el("div", "mb-1", p.type_label));
+    if (p.cause_label) { box.appendChild(popupRow("Cause de l'accident", p.cause_label)); }
     var badges = el("div", "mb-2");
     badges.appendChild(el("span", "badge " + (STATUS_BADGE[p.status] || ""), p.status_label));
     badges.appendChild(el("span", "badge sev-badge ms-1 " + (SEVERITY_CLASS[p.severity] || ""), p.severity_label));
@@ -132,6 +133,7 @@
     if (ADMIN) { return adminPopup(p); }
     var box = el("div", "map-popup");
     box.appendChild(el("div", "fw-bold mb-1", p.type_label));
+    if (p.cause_label) { box.appendChild(popupRow("Cause de l'accident", p.cause_label)); }
     var badges = el("div", "mb-2");
     badges.appendChild(el("span", "badge sev-badge " + (SEVERITY_CLASS[p.severity] || ""), p.severity_label));
     badges.appendChild(el("span", "badge text-bg-success ms-1", "Vérifié"));

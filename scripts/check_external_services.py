@@ -215,6 +215,8 @@ def osm_network_failure(browser):
     page.goto(BASE + "/anonymous-report/")
     page.locator("label[for='type-COLLISION']").click()
     page.wait_for_selector(".report-step.is-active[data-step='2']")
+    page.locator("label[for='cause-EXCESSIVE_SPEED']").click()
+    page.wait_for_selector(".report-step.is-active[data-step='3']")
     page.wait_for_function("document.getElementById('id_latitude').value !== ''")
     page.wait_for_timeout(2500)
     history = page.evaluate("window.__statusHistory || []")
@@ -238,6 +240,8 @@ def osm_report_step(browser):
     page.goto(BASE + "/anonymous-report/")
     page.locator("label[for='type-COLLISION']").tap()
     page.wait_for_selector(".report-step.is-active[data-step='2']")
+    page.locator("label[for='cause-EXCESSIVE_SPEED']").tap()
+    page.wait_for_selector(".report-step.is-active[data-step='3']")
     page.wait_for_function("document.querySelectorAll('#location-map .leaflet-tile-loaded').length >= 4")
     check("Étape Lieu : tuiles réelles chargées, aucune erreur (annulations Leaflet exclues)",
           any(t[0] == 200 for t in tiles) and not failed(tiles), f"{len(tiles)} requêtes, erreurs : {failed(tiles)[:3]}")

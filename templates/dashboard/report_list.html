@@ -40,7 +40,7 @@
   <table class="table table-hover align-middle mb-0" id="report-table">
     <thead>
       <tr>
-        <th>Référence</th><th>Type</th><th class="d-none d-sm-table-cell">Accident</th>
+        <th>Référence</th><th>Type</th><th class="d-none d-md-table-cell">Cause</th><th class="d-none d-sm-table-cell">Accident</th>
         <th class="d-none d-md-table-cell">Gravité</th><th>Statut</th>
         <th class="d-none d-lg-table-cell">Mode</th><th class="d-none d-lg-table-cell">Zone</th>
         <th class="d-none d-xl-table-cell">Signalé le</th><th></th>
@@ -51,6 +51,7 @@
       <tr>
         <td class="fw-semibold text-nowrap"><a href="{% url 'dashboard:report_detail' r.pk %}">{{ r.reference }}</a></td>
         <td>{{ r.get_reported_type_display }}</td>
+        <td class="d-none d-md-table-cell">{{ r.get_accident_cause_display|default:"Non renseignée" }}</td>
         <td class="d-none d-sm-table-cell text-nowrap">{{ r.accident_date|date:"d/m/Y" }}</td>
         <td class="d-none d-md-table-cell">{{ r.get_severity_display }}</td>
         <td>{% include "dashboard/_status_badge.html" with status=r.status label=r.get_status_display %}</td>
@@ -60,7 +61,7 @@
         <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="{% url 'dashboard:report_detail' r.pk %}">Ouvrir</a></td>
       </tr>
       {% empty %}
-      <tr><td colspan="9" class="text-center text-muted py-4">Aucun signalement ne correspond à ces critères.</td></tr>
+      <tr><td colspan="10" class="text-center text-muted py-4">Aucun signalement ne correspond à ces critères.</td></tr>
       {% endfor %}
     </tbody>
   </table>

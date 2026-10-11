@@ -122,7 +122,7 @@ class HomePageTests(TestCase):
         html = page.content.decode()
         self.assertContains(page, 'id="cta-report"')
         self.assertContains(page, "btn-cta")
-        self.assertContains(page, "4 étapes simples")
+        self.assertContains(page, "5 étapes simples")
         self.assertNotContains(page, 'id="cta-anonymous"')
         self.assertNotContains(page, "Se connecter avec mon téléphone")
 

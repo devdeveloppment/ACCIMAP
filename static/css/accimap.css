@@ -298,7 +298,7 @@ main code, main kbd, main samp {
 .export-icon { width: 3rem; height: 3rem; border-radius: .7rem; background: #eef3f8; color: var(--accimap-navy); display: flex; align-items: center; justify-content: center; }
 
 /* ======================================================================
-   Parcours de signalement en 4 étapes (mobile d'abord)
+   Parcours de signalement en 5 étapes (mobile d'abord)
    ====================================================================== */
 .wizard-header { margin-bottom: 1rem; }
 .mode-chip {
@@ -330,7 +330,7 @@ main code, main kbd, main samp {
 .stepper-item.is-done .stepper-check { display: inline-block; }
 .stepper-item.is-done .stepper-btn { color: var(--accimap-navy); }
 .wizard-progress { height: 5px; background: #dde5ee; border-radius: 3px; overflow: hidden; }
-.wizard-progress-bar { height: 100%; width: 25%; background: var(--accimap-accent); border-radius: 3px; transition: width .3s ease; }
+.wizard-progress-bar { height: 100%; width: 20%; background: var(--accimap-accent); border-radius: 3px; transition: width .3s ease; }
 
 /* Étapes : sans JavaScript, tout s'affiche ; avec JavaScript, une seule à la fois */
 .js .report-step:not(.is-active) { display: none; }
@@ -374,9 +374,8 @@ main code, main kbd, main samp {
 /* Étape 1 : cartes de types */
 .type-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: .7rem; }
 @media (min-width: 768px) { .type-grid { grid-template-columns: repeat(4, 1fr); gap: .9rem; } }
-.other-type-options[hidden] { display: none; }
-html:not(.js) .other-type-options[hidden] { display: block; }
 #type-error[hidden] { display: none !important; }
+#cause-error[hidden] { display: none !important; }
 .cause-card { min-height: 120px; }
 .type-card {
   position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: .3rem;
@@ -401,7 +400,7 @@ html:not(.js) .other-type-options[hidden] { display: block; }
 .type-card:has(.type-radio:checked) .type-tick { display: inline-flex; }
 .type-card:has(.type-radio:focus-visible) { outline: 3px solid #f5a623; outline-offset: 2px; }
 
-/* Étape 2 : lieu */
+/* Étape 3 : lieu */
 #location-map { height: 46vh; min-height: 300px; max-height: 520px; border-radius: .8rem; border: 1px solid #ced4da; z-index: 0; }
 .location-card { background: #fff; border-radius: .8rem; padding: 1rem; border-left: 5px solid var(--accimap-accent); box-shadow: 0 1px 3px rgba(15, 47, 79, .12); }
 .location-question { font-size: 1.1rem; font-weight: 700; color: var(--accimap-navy); margin: 0 0 .15rem; }

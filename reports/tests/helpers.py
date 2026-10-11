@@ -36,6 +36,7 @@ def valid_report_data(**overrides):
     """Données POST valides pour le formulaire de signalement (position à Lomé)."""
     data = {
         "accident_type": "RUN_OFF_ROAD",
+        "accident_cause": "EXCESSIVE_SPEED",
         "accident_date": (timezone.localdate() - timedelta(days=1)).isoformat(),
         "accident_time": "18:45",
         "severity": "SEVERE",

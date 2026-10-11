@@ -24,7 +24,7 @@
         <div class="d-grid gap-3 hero-actions">
           <a href="{% url 'reports:create' %}" class="btn btn-accent btn-cta" id="cta-report">
             {% icon "siren" size=28 css="me-3" %}
-            <span class="btn-cta-text"><span class="btn-cta-title">Signaler un accident</span><span class="btn-cta-sub">4 étapes simples, depuis votre téléphone</span></span>
+            <span class="btn-cta-text"><span class="btn-cta-title">Signaler un accident</span><span class="btn-cta-sub">5 étapes simples, depuis votre téléphone</span></span>
           </a>
         </div>
         <div class="d-flex flex-column flex-sm-row align-items-start align-items-sm-center flex-wrap gap-2 gap-sm-3 mt-3">
@@ -46,28 +46,33 @@
 
 {% include "includes/emergency_numbers.html" %}
 
-{# ------------------------------------------------ Comment signaler : les 4 étapes réelles #}
+{# ------------------------------------------------ Comment signaler : les 5 étapes réelles #}
 <section class="container py-4">
   <h2 class="h3 mb-1">Comment signaler ?</h2>
-  <p class="text-muted mb-4">Quatre étapes, sans formulaire compliqué.</p>
-  <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-4 g-3">
+  <p class="text-muted mb-4">Cinq étapes, sans formulaire compliqué.</p>
+  <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-5 g-3">
     <div class="col"><div class="card step-card h-100"><div class="card-body">
       <div class="step-card-icon">{% icon "signpost" size=26 %}<span class="step-number step-number-sm">1</span></div>
       <h3 class="h6 mt-3">Choisissez le type</h3>
       <p class="small text-muted mb-0">Collision, renversement, sortie de voie… Touchez la carte qui correspond.</p>
     </div></div></div>
     <div class="col"><div class="card step-card h-100"><div class="card-body">
-      <div class="step-card-icon">{% icon "map-pin" size=26 %}<span class="step-number step-number-sm">2</span></div>
+      <div class="step-card-icon">{% icon "triangle-alert" size=26 %}<span class="step-number step-number-sm">2</span></div>
+      <h3 class="h6 mt-3">Choisissez la cause</h3>
+      <p class="small text-muted mb-0">Sélectionnez séparément le facteur à l'origine de l'accident.</p>
+    </div></div></div>
+    <div class="col"><div class="card step-card h-100"><div class="card-body">
+      <div class="step-card-icon">{% icon "map-pin" size=26 %}<span class="step-number step-number-sm">3</span></div>
       <h3 class="h6 mt-3">Indiquez le lieu</h3>
       <p class="small text-muted mb-0">Votre position est trouvée automatiquement. Vous pouvez la corriger sur la carte.</p>
     </div></div></div>
     <div class="col"><div class="card step-card h-100"><div class="card-body">
-      <div class="step-card-icon">{% icon "camera" size=26 %}<span class="step-number step-number-sm">3</span></div>
+      <div class="step-card-icon">{% icon "camera" size=26 %}<span class="step-number step-number-sm">4</span></div>
       <h3 class="h6 mt-3">Ajoutez des détails</h3>
       <p class="small text-muted mb-0">Gravité, blessés, description et photo facultative. Une estimation suffit.</p>
     </div></div></div>
     <div class="col"><div class="card step-card h-100"><div class="card-body">
-      <div class="step-card-icon">{% icon "circle-check" size=26 %}<span class="step-number step-number-sm">4</span></div>
+      <div class="step-card-icon">{% icon "circle-check" size=26 %}<span class="step-number step-number-sm">5</span></div>
       <h3 class="h6 mt-3">Vérifiez et envoyez</h3>
       <p class="small text-muted mb-0">Un récapitulatif vous permet de relire avant l'envoi. Un administrateur vérifie ensuite.</p>
     </div></div></div>

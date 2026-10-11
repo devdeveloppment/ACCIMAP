@@ -5,8 +5,8 @@ C'est le SEUL endroit qui décide ce que le public peut voir. Principe : liste b
 Un champ n'est exposé que s'il est écrit explicitement ici ; ajouter un champ au modèle
 ne le rend donc jamais public par accident.
 
-Exposé : type, gravité, date et heure de l'accident, blessés, décès, et la description
-SEULEMENT si PUBLIC_MAP_SHOW_DESCRIPTION est activé.
+Exposé : type et cause séparés, gravité, date et heure de l'accident, blessés, décès,
+et la description SEULEMENT si PUBLIC_MAP_SHOW_DESCRIPTION est activé.
 
 Jamais exposé : utilisateur, téléphone, mode anonyme/identifié, identifiant, référence
 (numérotation séquentielle : elle révélerait le volume des signalements non publics),
@@ -53,7 +53,9 @@ def public_feature_collection(queryset, limit=None):
     for report in rows:
         properties = {
             "type": report.accident_type,
-            "type_label": report.get_reported_type_display(),
+            "type_label": report.get_accident_type_display(),
+            "cause": report.accident_cause,
+            "cause_label": report.get_accident_cause_display() or None,
             "severity": report.severity,
             "severity_label": report.get_severity_display(),
             "date": report.accident_date.isoformat(),

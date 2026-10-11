@@ -39,7 +39,7 @@ class PublicReportJourneyTests(TestCase):
             "Signaler un accident",
             "Aucun compte requis",
             "Type d'accident",
-            "Précisez « Autre » (facultatif)",
+            "Quelle est la cause de l'accident ?",
             "Utiliser ma position actuelle",
             'id="location-map"',
             'id="id_latitude"',

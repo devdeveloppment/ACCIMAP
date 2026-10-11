@@ -47,11 +47,19 @@ class ReportListTests(PersonasTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertCountEqual(references(response), [self.pending.reference, self.verified.reference, self.rejected.reference])
 
-    def test_type_autre_affiche_la_precision_choisie(self):
+    def test_type_et_cause_autre_sont_affiches_separement(self):
         page = self.get().content.decode()
+        self.assertIn("Autre", page)
         self.assertIn("Vitesse excessive", page)
-        self.assertNotIn("Autre —", page)
-        self.assertEqual(self.rejected.get_reported_type_display(), "Vitesse excessive")
+        self.assertEqual(self.rejected.get_reported_type_display(), "Autre")
+        self.assertEqual(self.rejected.get_accident_cause_display(), "Vitesse excessive")
+
+    def test_type_et_cause_sont_separes_dans_la_file_du_tableau_de_bord(self):
+        report = make_report(status="PENDING", accident_type="OTHER", accident_cause="EXCESSIVE_SPEED")
+        page = self.client.get(reverse("dashboard:index")).content.decode()
+        self.assertIn(report.reference, page)
+        self.assertIn("Autre", page)
+        self.assertIn("Vitesse excessive", page)
 
     def test_filtre_statut(self):
         for status, report in [("PENDING", self.pending), ("VERIFIED", self.verified), ("REJECTED", self.rejected)]:
@@ -433,7 +441,8 @@ class PhotoAccessTests(PersonasTestCase):
 
 
 class AdminMapTests(PersonasTestCase):
-    KEYS = {"id", "reference", "status", "status_label", "type_label", "severity", "severity_label",
+    KEYS = {"id", "reference", "status", "status_label", "type_label", "cause", "cause_label",
+            "severity", "severity_label",
             "date", "time", "injured", "deaths", "anonymous", "in_zone"}
 
     def setUp(self):

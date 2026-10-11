@@ -42,7 +42,8 @@ os.makedirs(SHOTS, exist_ok=True)
 results, created_ids, created_users = [], [], []
 CANARY = (1.3300, 6.2800)            # (lon, lat) : lieu réservé aux signalements NON publics
 SECRET_NOTE = "CANARY-NOTE-ADMIN"
-PUBLIC_KEYS = {"type", "type_label", "severity", "severity_label", "date", "time", "injured", "deaths"}
+PUBLIC_KEYS = {"type", "type_label", "cause", "cause_label", "severity", "severity_label",
+               "date", "time", "injured", "deaths"}
 
 
 def check(label, cond, detail=""):

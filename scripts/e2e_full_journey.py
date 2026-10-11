@@ -3,7 +3,7 @@ Vérification de bout en bout du PARCOURS COMPLET ACCIMAP (phase 8) dans un vrai
 enchaîné sans raccourci, en format smartphone puis ordinateur :
 
     1. Citoyen : accueil -> « Signaler » -> connexion OTP (numéro -> code -> vérification)
-    2. Signalement en 4 étapes (type, lieu GPS, détails, récapitulatif) -> enregistré « En attente »
+    2. Signalement en 5 étapes (type, cause, lieu GPS, détails, récapitulatif) -> enregistré « En attente »
     3. Absent de la carte publique tant qu'il n'est pas validé
     4. Administrateur : connexion PRIVÉE (identifiant + mot de passe) -> fiche -> « Vérifié »
     5. Apparition sur la carte publique (compteur, repère, API sans donnée personnelle)
@@ -169,11 +169,13 @@ def journey(p, name, viewport, mobile):
     check("BASE : compte citoyen créé, sans mot de passe ni accès staff",
           not citizen.is_staff and not citizen.has_usable_password())
 
-    # ---- 2. Signalement en 4 étapes
+    # ---- 2. Signalement en 5 étapes
     print("-- 2. Signalement")
     page.wait_for_load_state("networkidle")
     page.locator("label[for='type-PEDESTRIAN']").click()
     wait_step(page, 2)
+    page.locator("label[for='cause-EXCESSIVE_SPEED']").click()
+    wait_step(page, 3)
     page.wait_for_function("document.getElementById('id_latitude').value !== ''")
     lat, lon = float(page.input_value("#id_latitude")), float(page.input_value("#id_longitude"))
     check("GPS accepté : coordonnées reçues et affichées", abs(lat - GPS["latitude"]) < 1e-4 and abs(lon - GPS["longitude"]) < 1e-4, f"{lat},{lon}")
@@ -181,13 +183,13 @@ def journey(p, name, viewport, mobile):
     page.wait_for_function(f"document.getElementById('place-label').textContent.includes('{PLACE}')")
     check("Lieu lisible affiché (géocodage inverse)", PLACE in page.locator("#place-label").inner_text())
     page.click("#confirm-position-btn")
-    wait_step(page, 3)
+    wait_step(page, 4)
     page.fill("#id_description", PRIVATE)
     page.click("label.btn:has-text('Grave') >> nth=0")
     bump(page, "id_vehicle_count", 2)
     bump(page, "id_injured_count", 2)
-    page.click("#step3-next")
-    wait_step(page, 4)
+    page.click("#step4-next")
+    wait_step(page, 5)
     page.screenshot(path=f"{SHOTS}/{name}_full_1_recap.png", full_page=True)
     page.click("#submit-report")
     page.wait_for_selector("#report-reference")

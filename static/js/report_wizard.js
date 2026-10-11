@@ -1,4 +1,4 @@
-/* Parcours de signalement en 4 étapes : Type -> Lieu -> Détails -> Envoi.
+/* Parcours de signalement en 5 étapes : Type -> Cause -> Lieu -> Détails -> Envoi.
    Sans JavaScript, toutes les étapes restent visibles (repli) ; le serveur revalide TOUT à l'envoi
    (type, coordonnées, zone, dates, nombres, photo) : ce script n'est qu'une aide à la saisie. */
 (function () {
@@ -34,7 +34,7 @@
       return "Le téléphone a fourni une position imprécise (environ " + m + " m). Vérifiez que la localisation précise, le GPS et le Wi-Fi sont activés, puis réessayez. La précision dépend du téléphone et du signal ; vous pouvez aussi toucher la carte ou déplacer le repère.";
     }
   };
-  var TITLES = ["Type d'accident", "Lieu", "Détails", "Envoi"];
+  var TITLES = ["Type d'accident", "Cause de l'accident", "Lieu", "Détails", "Envoi"];
 
   var form = document.getElementById("report-form");
   var configNode = document.getElementById("map-config");
@@ -59,6 +59,7 @@
   var outsideDisclaimer = document.getElementById("outside-zone-disclaimer");
   var confirmInput = document.getElementById("id_confirm_outside_zone");
   var typeError = document.getElementById("type-error");
+  var causeError = document.getElementById("cause-error");
   var gpsLabel = gpsBtn.innerHTML;
 
   var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -95,8 +96,8 @@
     progress.setAttribute("aria-valuenow", String(n));
     progress.setAttribute("aria-valuetext", "Étape " + n + " sur " + steps.length + " : " + TITLES[n - 1]);
 
-    if (n === 2) { enterLocationStep(); }
-    if (n === 4) { buildRecap(); }
+    if (n === 3) { enterLocationStep(); }
+    if (n === 5) { buildRecap(); }
     if (opts.push) { history.pushState({ step: n }, "", "#etape-" + n); }
 
     var heading = $("[data-step='" + n + "'] .step-title", form);
@@ -111,12 +112,17 @@
       return ok;
     }
     if (n === 2) {
+      var causeOk = !!checked("accident_cause");
+      causeError.hidden = causeOk || quiet;
+      return causeOk;
+    }
+    if (n === 3) {
       if (!hasPosition()) { if (!quiet) { showStatus("danger", MSG.missing); } return false; }
       if (!state.confirmed) { if (!quiet) { showStatus("warning", MSG.unconfirmed); } return false; }
       return true;
     }
-    if (n === 3) {
-      var fields = Array.prototype.slice.call(steps[2].querySelectorAll("input, select, textarea"));
+    if (n === 4) {
+      var fields = Array.prototype.slice.call(steps[3].querySelectorAll("input, select, textarea"));
       for (var i = 0; i < fields.length; i += 1) {
         if (!fields[i].checkValidity()) {
           if (!quiet) { fields[i].reportValidity(); }
@@ -162,7 +168,7 @@
   });
   form.addEventListener("submit", function (event) {
     if (state.current !== steps.length) { event.preventDefault(); go(state.current + 1); return; }
-    for (var i = 1; i <= 3; i += 1) {
+    for (var i = 1; i < steps.length; i += 1) {
       if (!validate(i, true)) { event.preventDefault(); showStep(i, { push: true }); validate(i); return; }
     }
   });
@@ -170,14 +176,14 @@
   /* ------------------------------------------------------------------ étape 1 : type */
   var typeGrid = document.getElementById("type-grid");
   var causeGrid = document.getElementById("cause-grid");
-  var otherTypeOptions = document.getElementById("other-type-options");
   var step1Next = document.getElementById("step1-next");
+  var step2Next = document.getElementById("step2-next");
   function syncType() {
     var type = checked("accident_type");
-    var isOther = !!type && type.value === "OTHER";
-    otherTypeOptions.hidden = !isOther;
     step1Next.disabled = !type;
     typeError.hidden = true;
+    step2Next.disabled = !checked("accident_cause");
+    causeError.hidden = true;
   }
   // Le saut automatique ne concerne que le toucher/clic : au clavier, on passe par « Continuer ».
   typeGrid.addEventListener("pointerdown", function () {
@@ -190,23 +196,20 @@
   });
   typeGrid.addEventListener("change", function (event) {
     var input = event.target;
-    if (input.name === "accident_type" && input.value !== "OTHER") {
-      form.querySelectorAll('input[name="accident_cause"]').forEach(function (cause) { cause.checked = false; });
-    }
     syncType();
-    if (pointerFlag && state.current === 1 && input.name === "accident_type" && input.value !== "OTHER") {
+    if (pointerFlag && state.current === 1 && input.name === "accident_type") {
       setTimeout(function () { if (state.current === 1) { go(2); } }, 260);
     }
   });
   causeGrid.addEventListener("change", function () {
     syncType();
-    if (pointerFlag && state.current === 1) {
-      setTimeout(function () { if (state.current === 1) { go(2); } }, 260);
+    if (pointerFlag && state.current === 2) {
+      setTimeout(function () { if (state.current === 2) { go(3); } }, 260);
     }
   });
   syncType();
 
-  /* ------------------------------------------------------------------ étape 2 : lieu */
+  /* ------------------------------------------------------------------ étape 3 : lieu */
   function setConfirmLabel() {
     confirmLabel.textContent = outsideNow() ? MSG.confirmAnyway : MSG.confirm;
   }
@@ -421,7 +424,7 @@
     if (outsideNow()) { confirmInput.checked = true; }
     state.confirmed = true;
     clearStatus();
-    go(3);
+    go(4);
   });
 
   // Case de confirmation (repli sans bouton) : même effet que le bouton.
@@ -541,9 +544,8 @@
   function buildRecap() {
     var type = checked("accident_type");
     var cause = checked("accident_cause");
-    $("#recap-type").textContent = type
-      ? type.dataset.label + (cause ? " — " + cause.closest(".cause-card").querySelector(".type-name").textContent.trim() : "")
-      : "—";
+    $("#recap-type").textContent = type ? type.dataset.label : "—";
+    $("#recap-cause").textContent = cause ? cause.dataset.label : "—";
     var icon = type ? type.closest(".type-card").querySelector(".type-icon") : null;
     $("#recap-type-icon").innerHTML = icon ? icon.innerHTML : "";
 
@@ -597,7 +599,7 @@
     for (var i = 0; i < steps.length; i += 1) {
       if (steps[i].querySelector(".invalid-feedback:not([hidden])")) { return i + 1; }
     }
-    return form.querySelector(".alert-danger") ? 3 : 0;
+    return form.querySelector(".alert-danger") ? 4 : 0;
   }
 
   var startStep = 1;
@@ -606,10 +608,10 @@
     // Formulaire réaffiché par le serveur : on garde la saisie et on ouvre l'étape à corriger.
     startStep = errorStep;
     state.furthest = steps.length;
-    state.confirmed = hasPosition() && (!outsideNow() || confirmInput.checked) && errorStep !== 2;
+    state.confirmed = hasPosition() && (!outsideNow() || confirmInput.checked) && errorStep !== 3;
     if (hasPosition()) { confirmBtn.disabled = false; $("#coords-summary").classList.add("has-position"); }
     if (outsideNow()) { setConfirmLabel(); }
-    if (errorStep === 2) { state.autoLocated = true; }
+    if (errorStep === 3) { state.autoLocated = true; }
   }
   history.replaceState({ step: startStep }, "", "#etape-" + startStep);
   showStep(startStep, { silent: true });

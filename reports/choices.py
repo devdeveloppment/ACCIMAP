@@ -59,7 +59,7 @@ ACCIDENT_TYPE_HINTS = {
     AccidentType.INTERSECTION: "Carrefour, croisement, rond-point",
     AccidentType.PILEUP: "Plusieurs véhicules enchaînés",
     AccidentType.PEDESTRIAN: "Un piéton est touché",
-    AccidentType.OTHER: "Choisissez une précision",
+    AccidentType.OTHER: "Une autre nature d'accident",
 }
 ACCIDENT_TYPE_ICONS = {
     AccidentType.COLLISION: "arrow-right-left",

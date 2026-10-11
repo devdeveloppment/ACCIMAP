@@ -1,4 +1,4 @@
-"""Parcours de signalement en 4 étapes : structure de la page et enregistrement (la navigation entre étapes
+"""Parcours de signalement en 5 étapes : structure de la page et enregistrement (la navigation entre étapes
 est du JavaScript, vérifié dans un vrai navigateur par scripts/e2e_report_flow.py)."""
 import re
 from html import unescape
@@ -57,14 +57,14 @@ class WizardPageTests(TestCase):
     ANONYMOUS = reverse("reports:anonymous_create")
     IDENTIFIED = reverse("reports:create")
 
-    def test_structure_des_quatre_etapes(self):
+    def test_structure_des_cinq_etapes(self):
         html = self.client.get(self.ANONYMOUS).content.decode()
-        self.assertEqual(len(re.findall(r'class="report-step"', html)), 4)
-        for n in (1, 2, 3, 4):
+        self.assertEqual(len(re.findall(r'class="report-step"', html)), 5)
+        for n in (1, 2, 3, 4, 5):
             self.assertIn(f'data-step="{n}"', html)
-        for label in ("Type", "Lieu", "Détails", "Envoi"):
+        for label in ("Type", "Cause", "Lieu", "Détails", "Envoi"):
             self.assertRegex(html, rf'class="stepper-label">{label}<')
-        for expected in ["Que s'est-il passé ?", "Où cela s'est-il passé ?", "Dites-nous en plus", "Vérifiez avant d'envoyer",
+        for expected in ["Que s'est-il passé ?", "Quelle est la cause de l'accident ?", "Où cela s'est-il passé ?", "Dites-nous en plus", "Vérifiez avant d'envoyer",
                          "L'accident s'est-il produit ici ?", "Confirmer cette position", "Envoyer le signalement"]:
             self.assertIn(expected, html)
 
@@ -77,12 +77,12 @@ class WizardPageTests(TestCase):
             self.assertIn(f'class="type-name">{label}<', html)
         self.assertEqual(len(re.findall(r'<span class="type-icon"><svg', html)), 14)
         for hint in ACCIDENT_TYPE_HINTS.values():
-            self.assertIn(hint, html)
-        self.assertIn('id="other-type-options"', html)
-        self.assertRegex(html, r'id="other-type-options"[^>]*\bhidden\b')
+            self.assertIn(hint, unescape(html))
         self.assertIn('name="accident_cause"', html)
         self.assertNotIn('id="id_accident_cause"', html)
-        self.assertNotIn("Causes de l'accident", html)
+        self.assertIn("Cause de l'accident", html)
+        self.assertIn('data-step="1" aria-labelledby="step1-title"', html)
+        self.assertIn('data-step="2" aria-labelledby="step2-title"', html)
         self.assertEqual(
             [(value, unescape(label)) for value, label in re.findall(
                 r'id="cause-([A-Z_]+)" value="[^"]+"[^>]*>.*?<span class="type-name">([^<]+)<',
@@ -132,7 +132,7 @@ class WizardPageTests(TestCase):
         for expected in ['id="recap"', 'id="recap-type"', 'id="recap-place"', 'id="recap-coords"', 'id="recap-datetime"',
                          'id="recap-severity"', 'id="recap-counts"', 'id="recap-photos"', 'id="recap-declarant"']:
             self.assertContains(page, expected)
-        self.assertNotContains(page, 'id="recap-cause-row"')
+        self.assertContains(page, 'id="recap-cause"')
         self.assertContains(page, 'type="submit" class="btn btn-accent btn-lg flex-grow-1" id="submit-report"')
 
     def test_mode_anonyme(self):
@@ -156,7 +156,7 @@ class WizardPageTests(TestCase):
         a = self.client.get(self.ANONYMOUS).content.decode()
         b = self.client.get(self.IDENTIFIED).content.decode()
         for html in (a, b):
-            self.assertEqual(html.count('class="report-step"'), 4)
+            self.assertEqual(html.count('class="report-step"'), 5)
             self.assertEqual(html.count('class="type-card"'), 8)
 
     def test_script_et_configuration(self):
@@ -189,31 +189,28 @@ class WizardSubmissionTests(TestCase):
                     self.assertIsNone(report.user)
         self.assertEqual(AccidentReport.objects.count(), 16)
 
-    def test_chaque_precision_est_enregistree_avec_le_type_autre(self):
+    def test_chaque_cause_est_enregistree_separement_du_type(self):
         for cause, label in AccidentCause.choices:
             with self.subTest(cause=cause):
                 response = self.client.post(
                     reverse("reports:create"),
-                    valid_report_data(accident_type="OTHER", accident_cause=cause),
+                    valid_report_data(accident_type="COLLISION", accident_cause=cause),
                 )
                 self.assertEqual(response.status_code, 302)
                 report = AccidentReport.objects.latest("created_at")
-                self.assertEqual(report.accident_type, "OTHER")
+                self.assertEqual(report.accident_type, "COLLISION")
                 self.assertEqual(report.accident_cause, cause)
                 self.assertEqual(report.get_accident_cause_display(), label)
 
-    def test_cause_facultative_et_type_existant_conserve(self):
+    def test_cause_obligatoire_et_type_existant_conserve(self):
         response = self.client.post(
             self.URLS["formulaire public"],
-            valid_report_data(accident_type="ROLLOVER"),
+            valid_report_data(accident_type="ROLLOVER", accident_cause=""),
         )
 
-        self.assertEqual(response.status_code, 302)
-        report = AccidentReport.objects.get()
-        self.assertEqual(report.accident_type, "ROLLOVER")
-        self.assertIsNone(report.accident_cause)
-        self.assertTrue(report.is_anonymous)
-        self.assertIsNone(report.user)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("accident_cause", response.context["form"].errors)
+        self.assertEqual(AccidentReport.objects.count(), 0)
 
     def test_cause_invalide_est_refusee(self):
         response = self.client.post(
@@ -225,15 +222,16 @@ class WizardSubmissionTests(TestCase):
         self.assertIn("accident_cause", response.context["form"].errors)
         self.assertEqual(AccidentReport.objects.count(), 0)
 
-    def test_precision_refusee_si_le_type_n_est_pas_autre(self):
+    def test_cause_valide_est_acceptee_avec_un_type_different_d_autre(self):
         response = self.client.post(
             self.URLS["formulaire public"],
             valid_report_data(accident_type="COLLISION", accident_cause="EXCESSIVE_SPEED"),
         )
 
-        self.assertEqual(response.status_code, 200)
-        self.assertIn("accident_cause", response.context["form"].errors)
-        self.assertEqual(AccidentReport.objects.count(), 0)
+        self.assertEqual(response.status_code, 302)
+        report = AccidentReport.objects.get()
+        self.assertEqual(report.accident_type, "COLLISION")
+        self.assertEqual(report.accident_cause, "EXCESSIVE_SPEED")
 
     def test_coordonnees_choisies_conservees_dans_le_pointfield(self):
         self.client.post(self.URLS["ancienne URL"], valid_report_data(latitude="6.1319123", longitude="1.2228987"))
