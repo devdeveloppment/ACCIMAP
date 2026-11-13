@@ -63,7 +63,7 @@ class AccidentReport(models.Model):
         on_delete=models.SET_NULL,
         related_name="reports",
     )
-    is_anonymous = models.BooleanField("signalement anonyme", default=False)
+    is_anonymous = models.BooleanField("signalement anonyme", default=True)
 
     # --- Accident --------------------------------------------------------
     accident_type = models.CharField(

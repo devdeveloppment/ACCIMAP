@@ -121,7 +121,6 @@
     box.appendChild(popupRow("Date", formatDate(p.date) + " à " + p.time));
     box.appendChild(popupRow("Blessés", String(p.injured)));
     box.appendChild(popupRow("Décès", String(p.deaths)));
-    box.appendChild(popupRow("Mode", p.anonymous ? "Anonyme" : "Identifié"));
     box.appendChild(popupRow("Zone", p.in_zone ? "Dans la zone de couverture" : "Hors zone de couverture"));
     var link = el("a", "btn btn-sm btn-primary mt-2", "Ouvrir le détail");
     link.href = cfg.detailUrl.replace("{id}", encodeURIComponent(p.id));

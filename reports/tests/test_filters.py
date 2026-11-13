@@ -23,9 +23,9 @@ def apply(form_class, **data):
 class AdminFilterTests(TestCase):
     def setUp(self):
         self.citizen = User.objects.create_user("90123456")
-        self.pending = make_report(status=ReportStatus.PENDING, user=self.citizen)
+        self.pending = make_report(status=ReportStatus.PENDING, user=self.citizen, is_anonymous=False)
         self.verified = make_report(status=ReportStatus.VERIFIED, is_anonymous=True)
-        self.rejected = make_report(status=ReportStatus.REJECTED, location=PARIS)
+        self.rejected = make_report(status=ReportStatus.REJECTED, is_anonymous=False, location=PARIS)
 
     def test_sans_filtre_tout_est_retourne(self):
         self.assertEqual(apply(ReportFilterForm).count(), 3)
@@ -34,17 +34,17 @@ class AdminFilterTests(TestCase):
         for status, expected in [("PENDING", self.pending), ("VERIFIED", self.verified), ("REJECTED", self.rejected)]:
             self.assertEqual(list(apply(ReportFilterForm, status=status)), [expected])
 
-    def test_mode_identifie_anonyme(self):
-        self.assertEqual(list(apply(ReportFilterForm, mode="anonymous")), [self.verified])
-        self.assertCountEqual(apply(ReportFilterForm, mode="identified"), [self.pending, self.rejected])
+    def test_ancien_parametre_mode_est_ignore(self):
+        self.assertNotIn("mode", ReportFilterForm().fields)
+        self.assertEqual(apply(ReportFilterForm, mode="identified").count(), 3)
 
     def test_zone_dynamique_dans_et_hors_zone(self):
         self.assertEqual(list(apply(ReportFilterForm, zone="outside")), [self.rejected])
         self.assertCountEqual(apply(ReportFilterForm, zone="inside"), [self.pending, self.verified])
 
-    def test_combinaison_statut_et_mode(self):
+    def test_ancien_parametre_mode_ne_change_pas_filtre_statut(self):
         self.assertEqual(list(apply(ReportFilterForm, status="VERIFIED", mode="anonymous")), [self.verified])
-        self.assertEqual(list(apply(ReportFilterForm, status="PENDING", mode="anonymous")), [])
+        self.assertEqual(list(apply(ReportFilterForm, status="PENDING", mode="anonymous")), [self.pending])
 
     def test_periode_type_gravite(self):
         old = make_report(accident_date=timezone.localdate() - timedelta(days=100),
@@ -60,7 +60,7 @@ class AdminFilterTests(TestCase):
         self.assertIn("date_to", form.errors)
 
     def test_valeurs_invalides(self):
-        for data in [{"status": "X"}, {"mode": "X"}, {"zone": "X"}, {"severity": "X"}, {"accident_type": "X"}]:
+        for data in [{"status": "X"}, {"zone": "X"}, {"severity": "X"}, {"accident_type": "X"}]:
             self.assertFalse(ReportFilterForm(data).is_valid(), data)
 
 

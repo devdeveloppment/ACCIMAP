@@ -37,18 +37,18 @@ def squash(text):
 
 
 class ExportDataMixin:
-    """Jeu de données : 3 statuts, identifiés/anonymes, dans/hors zone, texte piégé."""
+    """Jeu de données : 3 statuts, dans/hors zone, texte piégé."""
 
     def make_data(self):
         today = timezone.localdate()
         self.owner = User.objects.create_user("90123456")
-        self.v = make_report(status="VERIFIED", user=self.owner, accident_type="ROLLOVER", severity="SEVERE",
+        self.v = make_report(status="VERIFIED", user=self.owner, is_anonymous=False, accident_type="ROLLOVER", severity="SEVERE",
                              accident_date=today - timedelta(days=10), description="Carrefour du marché",
                              injured_count=2, death_count=1, vehicle_count=3, admin_note="NOTE-INTERNE-CONFIDENTIELLE")
         self.p = make_report(status="PENDING", is_anonymous=True, accident_type="OTHER",
                              accident_cause="EXCESSIVE_SPEED", severity="LOW",
                              accident_date=today - timedelta(days=3), description=FORMULA)
-        self.r = make_report(status="REJECTED", user=self.owner, accident_type="OTHER", severity="CRITICAL",
+        self.r = make_report(status="REJECTED", user=self.owner, is_anonymous=False, accident_type="OTHER", severity="CRITICAL",
                              accident_date=today - timedelta(days=1), location=PARIS, description="Hors zone")
         self.refs = {self.v.reference, self.p.reference, self.r.reference}
 
@@ -79,7 +79,7 @@ class CsvExportTests(ExportDataMixin, PersonasTestCase):
         row = dict(zip(rows[0], rows[1]))
         self.assertEqual(row["Référence"], self.v.reference)
         self.assertEqual(row["Type d'accident"], "Renversement")
-        self.assertEqual((row["Gravité"], row["Statut"], row["Mode"]), ("Grave", "Vérifié", "Identifié"))
+        self.assertEqual((row["Gravité"], row["Statut"], row["Mode"]), ("Grave", "Vérifié", "Anonyme"))
         self.assertEqual((row["Latitude"], row["Longitude"]), ("6.172500", "1.231400"))   # point décimal, 6 décimales
         self.assertEqual(row["Zone de couverture"], "Dans la zone")
         self.assertEqual((row["Véhicules impliqués (approx.)"], row["Blessés"], row["Décès"]), ("3", "2", "1"))
@@ -114,7 +114,6 @@ class CsvExportTests(ExportDataMixin, PersonasTestCase):
     def test_filtres(self):
         cases = [
             ({"status": "VERIFIED"}, {self.v}), ({"status": "REJECTED"}, {self.r}),
-            ({"mode": "anonymous"}, {self.p}), ({"mode": "identified"}, {self.v, self.r}),
             ({"accident_type": "OTHER"}, {self.p, self.r}), ({"severity": "SEVERE"}, {self.v}),
             ({"zone": "outside"}, {self.r}), ({"zone": "inside"}, {self.v, self.p}),
             ({"q": "marché"}, {self.v}), ({"q": self.p.reference}, {self.p}),
@@ -127,6 +126,9 @@ class CsvExportTests(ExportDataMixin, PersonasTestCase):
                     self.assertEqual(response.status_code, 302)   # filtre invalide : pas de fichier
                     continue
                 self.assertEqual(self.refs_in(csv_rows(response)), {r.reference for r in expected})
+
+    def test_ancien_filtre_mode_est_ignore(self):
+        self.assertEqual(self.refs_in(csv_rows(self.client.get(self.url, {"mode": "identified"}))), self.refs)
 
     def test_filtre_periode_et_combinaison(self):
         today = timezone.localdate()
@@ -273,7 +275,7 @@ class PdfExportTests(ExportDataMixin, PersonasTestCase):
     def test_filtres_affiches_et_appliques(self):
         text = pdf_text(self.client.get(self.url, {"status": "VERIFIED", "mode": "identified"}))
         self.assertIn("Statut : Vérifié", text)
-        self.assertIn("Mode : Identifiés", text)
+        self.assertNotIn("Mode :", text)
         self.assertIn(self.v.reference, text)
         self.assertNotIn(self.p.reference, text)
         self.assertNotIn(self.r.reference, text)
@@ -286,7 +288,7 @@ class PdfExportTests(ExportDataMixin, PersonasTestCase):
 
     def test_resume_statistique(self):
         text = pdf_text(self.client.get(self.url))
-        for expected in ["Total", "Anonymes", "Identifiés", "En attente", "Vérifiés", "Rejetés", "Blessés", "Décès", "Hors zone de couverture"]:
+        for expected in ["Total", "Anonymes", "En attente", "Vérifiés", "Rejetés", "Blessés", "Décès", "Hors zone de couverture"]:
             self.assertIn(expected, text)
 
     def test_aucun_numero_de_telephone(self):
@@ -407,7 +409,7 @@ class ExportPageAndAuditTests(ExportDataMixin, PersonasTestCase):
         self.assertTrue(all(e.user == self.personas["staff"] for e in entries))
         self.assertIn("CSV : 1 signalement(s). Filtres : Statut : Vérifié", entries[0].change_message)
         self.assertIn("Excel : 3 signalement(s). Filtres : aucun filtre", entries[1].change_message)
-        self.assertIn("Mode : Anonymes", entries[2].change_message)
+        self.assertNotIn("Mode :", entries[2].change_message)
         for entry in entries:
             self.assertIsNone(PHONE_PATTERN.search(entry.change_message + entry.object_repr))
 

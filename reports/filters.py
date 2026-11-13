@@ -13,7 +13,6 @@ from django.db.models import Q
 from .choices import AccidentType, ReportStatus, Severity
 from .zone import get_coverage_zone
 
-MODE_CHOICES = [("", "Tous les modes"), ("identified", "Identifiés"), ("anonymous", "Anonymes")]
 ZONE_CHOICES = [
     ("", "Toutes les positions"),
     ("inside", "Dans la zone de couverture"),
@@ -38,7 +37,6 @@ class ReportFilterForm(forms.Form):
     status = forms.ChoiceField(
         required=False, label="Statut", choices=[("", "Tous les statuts")] + ReportStatus.choices
     )
-    mode = forms.ChoiceField(required=False, label="Mode", choices=MODE_CHOICES)
     zone = forms.ChoiceField(required=False, label="Zone", choices=ZONE_CHOICES)
 
     q = forms.CharField(
@@ -46,7 +44,7 @@ class ReportFilterForm(forms.Form):
         widget=forms.TextInput(attrs={"placeholder": "Référence, description, note…", "type": "search"}),
     )
 
-    ADMIN_ONLY = ("status", "mode", "zone", "q")
+    ADMIN_ONLY = ("status", "zone", "q")
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -74,8 +72,6 @@ class ReportFilterForm(forms.Form):
             queryset = queryset.filter(severity=data["severity"])
         if data.get("status"):
             queryset = queryset.filter(status=data["status"])
-        if data.get("mode"):
-            queryset = queryset.filter(is_anonymous=(data["mode"] == "anonymous"))
         if data.get("q"):
             term = data["q"].strip()
             queryset = queryset.filter(

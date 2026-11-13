@@ -1,6 +1,5 @@
 """Django Admin : utilisateurs. Réservé aux superutilisateurs (permissions « accounts.* » jamais données au staff)."""
 from django.contrib import admin, messages
-from django.db.models import Count
 
 from accounts.models import User
 from accounts.phone import mask_phone
@@ -12,7 +11,7 @@ from dashboard.audit import CHANGE, log_action
 
 @admin.register(User)
 class UserAdmin(admin.ModelAdmin):
-    list_display = ("phone_number", "role_display", "is_active", "date_joined", "last_login", "identified_reports")
+    list_display = ("phone_number", "role_display", "is_active", "date_joined", "last_login")
     list_filter = ("is_active", "is_staff", "is_superuser", ("date_joined", admin.DateFieldListFilter))
     search_fields = ("phone_number",)
     ordering = ("-date_joined",)
@@ -23,13 +22,10 @@ class UserAdmin(admin.ModelAdmin):
         ("Compte", {"fields": ("phone_number", "is_active")}),
         ("Niveau d'accès (modifiable par les actions de la liste)",
          {"fields": ("role_display", "report_permissions_display", "is_staff", "is_superuser")}),
-        ("Activité", {"fields": ("date_joined", "last_login", "identified_reports")}),
+        ("Activité", {"fields": ("date_joined", "last_login")}),
     )
     readonly_fields = ("phone_number", "role_display", "report_permissions_display", "is_staff", "is_superuser",
-                       "date_joined", "last_login", "identified_reports")
-
-    def get_queryset(self, request):
-        return super().get_queryset(request).annotate(_report_count=Count("reports"))
+                       "date_joined", "last_login")
 
     # Les comptes se créent par createsuperuser ou par le tableau de bord et se désactivent plutôt qu'ils ne se suppriment.
     def has_add_permission(self, request):
@@ -47,10 +43,6 @@ class UserAdmin(admin.ModelAdmin):
         rights = get_report_permissions(obj)
         granted = [label for key, label in (("view", "voir"), ("change", "modifier"), ("delete", "supprimer")) if rights[key]]
         return ", ".join(granted) or "aucun"
-
-    @admin.display(description="Signalements identifiés", ordering="_report_count")
-    def identified_reports(self, obj):
-        return getattr(obj, "_report_count", obj.reports.count())
 
     # ---- Garde-fou : un superutilisateur ne se verrouille pas lui-même ---------------------------
     def save_model(self, request, obj, form, change):

@@ -19,6 +19,7 @@ def make_report(**overrides):
         "accident_date": timezone.localdate() - timedelta(days=1),
         "accident_time": "14:30",
         "severity": "MEDIUM",
+        "is_anonymous": True,
         "location": Point(*LOME, srid=4326),
     }
     data.update(overrides)

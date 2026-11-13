@@ -103,9 +103,5 @@ def compute_stats(queryset, include_rejected=False):
                 "codes": [code for code, _ in ReportStatus.choices],
                 "values": [counts["pending"], counts["verified"], counts["rejected"]],
             },
-            "modes": {
-                "labels": ["Identifiés", "Anonymes"],
-                "values": [counts["identified"], counts["anonymous"]],
-            },
         },
     }

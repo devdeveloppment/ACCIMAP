@@ -34,7 +34,7 @@ from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, Tabl
 
 from dashboard.stats import compute_stats
 from reports.choices import AccidentType, ReportStatus, Severity
-from reports.filters import MODE_CHOICES, ZONE_CHOICES
+from reports.filters import ZONE_CHOICES
 from reports.zone import annotate_in_zone, get_coverage_zone
 
 NAVY = "0F2F4F"
@@ -86,7 +86,7 @@ COLUMNS = [
     Column("cause", "Cause de l'accident", 55, "text", lambda r: r.get_accident_cause_display()),
     Column("severity", "Gravité", 11, "text", lambda r: r.get_severity_display()),
     Column("status", "Statut", 12, "text", lambda r: r.get_status_display()),
-    Column("mode", "Mode", 11, "text", lambda r: "Anonyme" if r.is_anonymous else "Identifié"),
+    Column("mode", "Mode", 11, "text", lambda r: "Anonyme"),
     Column("latitude", "Latitude", 12, "float", lambda r: round(r.location.y, 6)),
     Column("longitude", "Longitude", 12, "float", lambda r: round(r.location.x, 6)),
     Column("zone", "Zone de couverture", 20, "text", lambda r: "Dans la zone" if r.in_zone else "Hors zone"),
@@ -138,8 +138,6 @@ def describe_filters(form):
         lines.append(("Période (date de l'accident)", f"du {_fmt_date(data.get('date_from'))} au {_fmt_date(data.get('date_to'))}"))
     if data.get("status"):
         lines.append(("Statut", ReportStatus(data["status"]).label))
-    if data.get("mode"):
-        lines.append(("Mode", dict(MODE_CHOICES)[data["mode"]]))
     if data.get("accident_type"):
         lines.append(("Type d'accident", AccidentType(data["accident_type"]).label))
     if data.get("severity"):
@@ -159,7 +157,7 @@ def filters_summary_text(form):
 def summary_blocks(stats):
     c = stats["counts"]
     return [
-        ("Signalements", [("Total", c["total"]), ("Anonymes", c["anonymous"]), ("Identifiés", c["identified"]),
+        ("Signalements", [("Total", c["total"]), ("Anonymes", c["anonymous"]),
                           ("En attente", c["pending"]), ("Vérifiés", c["verified"]), ("Rejetés", c["rejected"])]),
         ("Accidents retenus" + ("" if stats["include_rejected"] else " (hors rejetés)"),
          [("Accidents", stats["accidents"]), ("Véhicules impliqués (déclarés)", stats["vehicles"]),

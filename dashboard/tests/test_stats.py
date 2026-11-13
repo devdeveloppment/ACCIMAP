@@ -27,10 +27,10 @@ class ComputeStatsTests(TestCase):
         self.today = timezone.localdate()
         self.user = User.objects.create_user("90123456")
         d = lambda n: self.today - timedelta(days=n)
-        make_report(status="VERIFIED", user=self.user, injured_count=2, death_count=1, accident_type="RUN_OFF_ROAD", severity="SEVERE", accident_date=d(5))
+        make_report(status="VERIFIED", user=self.user, is_anonymous=False, injured_count=2, death_count=1, accident_type="RUN_OFF_ROAD", severity="SEVERE", accident_date=d(5))
         make_report(status="VERIFIED", is_anonymous=True, injured_count=1, accident_type="ROLLOVER", severity="LOW", accident_date=d(5))
         make_report(status="PENDING", is_anonymous=True, injured_count=3, accident_type="RUN_OFF_ROAD", severity="MEDIUM", accident_date=d(3), location=PARIS)
-        make_report(status="REJECTED", user=self.user, injured_count=50, death_count=9, accident_type="OTHER", severity="CRITICAL", accident_date=d(3))
+        make_report(status="REJECTED", user=self.user, is_anonymous=False, injured_count=50, death_count=9, accident_type="OTHER", severity="CRITICAL", accident_date=d(3))
 
     def stats(self, **kw):
         return compute_stats(AccidentReport.objects.all(), **kw)
@@ -76,13 +76,11 @@ class ComputeStatsTests(TestCase):
         self.assertEqual(sum(s["charts"]["severities"]["values"]), s["accidents"])
         self.assertEqual(sum(s["charts"]["period"]["values"]), s["accidents"])
         self.assertEqual(sum(s["charts"]["statuses"]["values"]), s["counts"]["total"])
-        self.assertEqual(sum(s["charts"]["modes"]["values"]), s["counts"]["total"])
 
-    def test_statuts_et_modes(self):
+    def test_statuts(self):
         charts = self.stats()["charts"]
         self.assertEqual(charts["statuses"]["codes"], ["PENDING", "VERIFIED", "REJECTED"])
         self.assertEqual(charts["statuses"]["values"], [1, 2, 1])
-        self.assertEqual(charts["modes"]["values"], [2, 2])
 
     def test_periode_courte_par_jour_avec_jours_vides(self):
         period = self.stats()["charts"]["period"]
@@ -124,17 +122,17 @@ class StatisticsPagesTests(PersonasTestCase):
         super().setUp()
         today = timezone.localdate()
         self.owner = User.objects.create_user("90123456")
-        self.v = make_report(status="VERIFIED", user=self.owner, injured_count=2, accident_type="RUN_OFF_ROAD", accident_date=today - timedelta(days=4))
+        self.v = make_report(status="VERIFIED", user=self.owner, is_anonymous=False, injured_count=2, accident_type="RUN_OFF_ROAD", accident_date=today - timedelta(days=4))
         self.p = make_report(status="PENDING", is_anonymous=True, injured_count=3, accident_date=today - timedelta(days=2))
-        self.p_old = make_report(status="PENDING", injured_count=1, accident_date=today - timedelta(days=9))
-        self.r = make_report(status="REJECTED", injured_count=40, death_count=5, accident_date=today - timedelta(days=1), location=PARIS)
+        self.p_old = make_report(status="PENDING", is_anonymous=False, injured_count=1, accident_date=today - timedelta(days=9))
+        self.r = make_report(status="REJECTED", is_anonymous=False, injured_count=40, death_count=5, accident_date=today - timedelta(days=1), location=PARIS)
         self.login("staff")
 
     def test_tableau_de_bord_affiche_les_chiffres_reels(self):
         response = self.client.get(reverse("dashboard:index"))
         stats = response.context["stats"]
         self.assertEqual(stats["counts"]["total"], 4)
-        for element, value in [("kpi-total", 4), ("kpi-anonymous", 1), ("kpi-identified", 3), ("kpi-pending", 2),
+        for element, value in [("kpi-total", 4), ("kpi-anonymous", 1), ("kpi-pending", 2),
                                ("kpi-verified", 1), ("kpi-rejected", 1), ("kpi-injured", 6), ("kpi-deaths", 0)]:
             self.assertContains(response, f'id="{element}">{value}<')
         data = chart_data(response)
@@ -171,9 +169,9 @@ class StatisticsPagesTests(PersonasTestCase):
         self.assertContains(response, "excluent les signalements rejetés")
         self.assertEqual(response.context["stats"]["injured"], 6)
 
-    def test_filtres_mode_zone_type_periode(self):
+    def test_ancien_filtre_mode_ignore_zone_type_periode(self):
         url = reverse("dashboard:statistics")
-        self.assertEqual(self.client.get(url, {"mode": "anonymous"}).context["stats"]["counts"]["total"], 1)
+        self.assertEqual(self.client.get(url, {"mode": "anonymous"}).context["stats"]["counts"]["total"], 4)
         self.assertEqual(self.client.get(url, {"zone": "outside"}).context["stats"]["counts"]["total"], 1)
         self.assertEqual(self.client.get(url, {"accident_type": "RUN_OFF_ROAD"}).context["stats"]["counts"]["total"], 1)
         today = timezone.localdate()
@@ -181,7 +179,7 @@ class StatisticsPagesTests(PersonasTestCase):
 
     def test_filtres_combines(self):
         stats = self.client.get(reverse("dashboard:statistics"), {"status": "PENDING", "mode": "identified"}).context["stats"]
-        self.assertEqual(stats["counts"]["total"], 1)
+        self.assertEqual(stats["counts"]["total"], 2)
 
     def test_filtres_invalides_aucun_chiffre_trompeur(self):
         response = self.client.get(reverse("dashboard:statistics"), {"status": "XX"})
@@ -190,11 +188,11 @@ class StatisticsPagesTests(PersonasTestCase):
 
     def test_graphiques_et_bibliotheque_chargee(self):
         page = self.client.get(reverse("dashboard:statistics"))
-        for canvas in ["chart-period", "chart-statuses", "chart-types", "chart-severities", "chart-modes"]:
+        for canvas in ["chart-period", "chart-statuses", "chart-types", "chart-severities"]:
             self.assertContains(page, f'id="{canvas}"')
         self.assertContains(page, "vendor/chartjs/chart.umd.js")
         self.assertContains(page, "js/dashboard_charts.js")
-        self.assertEqual(set(chart_data(page)), {"period", "types", "severities", "statuses", "modes"})
+        self.assertEqual(set(chart_data(page)), {"period", "types", "severities", "statuses"})
         self.assertEqual(chart_data(page)["types"]["colors"], [accident_type_color(code) for code in AccidentType.values])
 
     def test_zone_mentionnee_comme_indicative(self):

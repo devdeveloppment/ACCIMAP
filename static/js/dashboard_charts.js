@@ -77,5 +77,4 @@
   }
 
   doughnut("chart-statuses", data.statuses, data.statuses.codes.map(function (c) { return STATUS[c]; }));
-  if (data.modes) { doughnut("chart-modes", data.modes, [NAVY, "#8aa4bf"]); }
 })();
